@@ -48,6 +48,7 @@ public:
 	void			ReadXML(QDomElement& Parent);
 	QDomElement		WriteXML(QDomDocument& DOM, QDomElement& Parent);
 	static QCamera	Default(void);
+	void			CycleCameraParams(void);
 
 public slots:
 	void OnFilmChanged(void);

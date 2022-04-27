@@ -15,6 +15,7 @@
 
 #include "Node.h"
 #include "TransferFunction.h"
+#include "iostream"
 
 QNode::QNode(const QNode& Other)
 {

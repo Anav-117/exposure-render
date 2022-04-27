@@ -52,7 +52,7 @@ public:
 	void run();
 
 	bool			Load(QString& FileName);
-
+	bool			LoadRGBA(QString& Filename);
 	QString			GetFileName(void) const						{	return m_FileName;		}
 	void			SetFileName(const QString& FileName)		{	m_FileName = FileName;	}
 	CColorRgbLdr*	GetRenderImage(void) const;
@@ -64,8 +64,10 @@ private:
 //	CCudaFrameBuffers	m_CudaFrameBuffers;
 	CColorRgbLdr*		m_pRenderImage;
 	short*				m_pDensityBuffer;
+	uchar4*				m_pDensityBufferRGBA;
 	short*				m_pGradientMagnitudeBuffer;
-
+	bool				RGBAVolume = false;
+		
 
 public:
 	bool			m_Abort;
@@ -87,6 +89,7 @@ public slots:
 extern QRenderThread* gpRenderThread;
 
 void StartRenderThread(QString& FileName);
+void StartRenderThreadRGBA(QString& FileName);
 void KillRenderThread(void);
 
 extern QMutex gSceneMutex;

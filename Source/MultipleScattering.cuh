@@ -20,6 +20,8 @@
 #define KRNL_MS_BLOCK_H		8
 #define KRNL_MS_BLOCK_SIZE	KRNL_MS_BLOCK_W * KRNL_MS_BLOCK_H
 
+bool isRGBA = false;
+
 KERNEL void KrnlMultipleScattering(CScene* pScene, int* pSeeds)
 {
 	const int X		= (blockIdx.x * blockDim.x) + threadIdx.x;
@@ -85,8 +87,10 @@ KERNEL void KrnlMultipleScattering(CScene* pScene, int* pSeeds)
 //	surf2Dwrite(ColorXYZA, gSurfRunningEstimateXyza, X * sizeof(float4), Y);
 }
 
-void MultipleScattering(CScene* pScene, CScene* pDevScene, int* pSeeds)
+void MultipleScattering(CScene* pScene, CScene* pDevScene, int* pSeeds, bool RGBA)
 {
+	isRGBA = RGBA;
+
 	const dim3 KernelBlock(KRNL_MS_BLOCK_W, KRNL_MS_BLOCK_H);
 	const dim3 KernelGrid((int)ceilf((float)pScene->m_Camera.m_Film.m_Resolution.GetResX() / (float)KernelBlock.x), (int)ceilf((float)pScene->m_Camera.m_Film.m_Resolution.GetResY() / (float)KernelBlock.y));
 	

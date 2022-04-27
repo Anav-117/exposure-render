@@ -15,8 +15,14 @@
 
 #include "Transport.cuh"
 
-KERNEL void KrnlSingleScattering(CScene* pScene, CCudaView* pView)
+KERNEL void KrnlSingleScattering(CScene* pScene, CCudaView* pView, bool RGBA)
 {
+	SetResolution(pScene->m_Resolution[0], pScene->m_Resolution[1], pScene->m_Resolution[2]);
+	//printf("%f\n", pScene->m_RGBA
+	SetRGBA(true);
+
+	//printf("%f\n", pScene->m_RGBA);
+		
 	const int X		= blockIdx.x * blockDim.x + threadIdx.x;
 	const int Y		= blockIdx.y * blockDim.y + threadIdx.y;
 
@@ -40,15 +46,41 @@ KERNEL void KrnlSingleScattering(CScene* pScene, CCudaView* pView)
 	
 	CLight* pLight = NULL;
 	
+	float3 TexCoords;
+	TexCoords.x = Pe.x;
+	TexCoords.y = Pe.y;
+	TexCoords.z = Pe.z;
+
+
 	if (SampleDistanceRM(Re, RNG, Pe))
 	{
 		if (NearestLight(pScene, CRay(Re.m_O, Re.m_D, 0.0f, (Pe - Re.m_O).Length()), Li, Pl, pLight))
 		{
-			pView->m_FrameEstimateXyza.Set(CColorXyza(Lv.c[0], Lv.c[1], Lv.c[2]), X, Y);
-			return;
+			if (RGBA) {
+				float4 Texture = tex3D(gTexDensityRGBA, TexCoords.x, TexCoords.y, TexCoords.z);
+				Lv = CColorXyz(Texture.x, Texture.y, Texture.z);
+				//printf("1 - COLOR - %a : %a : %a\n", Lv.c[0], Lv.c[1], Lv.c[2]);
+				pView->m_FrameEstimateXyza.Set(CColorXyza(Lv.c[0], Lv.c[1], Lv.c[2]), X, Y);
+				return;
+			}
+			else {
+				//float Texture = tex3D(gTexDensity, TexCoords.x, TexCoords.y, TexCoords.z);
+				//Lv = CColorXyz(Texture);
+				//pView->m_FrameEstimateXyza.Set(CColorXyza(Texture, Texture, Texture), X, Y);
+				pView->m_FrameEstimateXyza.Set(CColorXyza(Lv.c[0], Lv.c[1], Lv.c[2]), X, Y);
+				return;
+			}
 		}
 		
-		const float D = GetNormalizedIntensity(Pe);
+		float D = 0;
+
+		if (RGBA) {
+			D = GetNormalizedIntensity(Pe);//tex3D(gTexDensityRGBA, TexCoords.x, TexCoords.y, TexCoords.z).w;
+		}
+		else {
+			//D = tex3D(gTexDensity, TexCoords.x, TexCoords.y, TexCoords.z);
+			D = GetNormalizedIntensity(Pe);
+		}
 
 		Lv += GetEmission(D).ToXYZ();
 
@@ -72,11 +104,13 @@ KERNEL void KrnlSingleScattering(CScene* pScene, CCudaView* pView)
 
 				const float PdfBrdf = (1.0f - __expf(-pScene->m_GradientFactor * GradMag));
 
-				if (RNG.Get1() < PdfBrdf)
+				if (RNG.Get1() < PdfBrdf) {
   					Lv += UniformSampleOneLight(pScene, CVolumeShader::Brdf, D, Normalize(-Re.m_D), Pe, NormalizedGradient(Pe), RNG, true);
-				else
+					//printf("2 - COLOR - %a : %a : %a\n", Lv.c[0], Lv.c[1], Lv.c[2]);
+				}
+				else {
  					Lv += 0.5f * UniformSampleOneLight(pScene, CVolumeShader::Phase, D, Normalize(-Re.m_D), Pe, NormalizedGradient(Pe), RNG, false);
-
+				}
 				break;
 			}
 		}
@@ -87,15 +121,23 @@ KERNEL void KrnlSingleScattering(CScene* pScene, CCudaView* pView)
 			Lv = Li;
 	}
 
-	pView->m_FrameEstimateXyza.Set(CColorXyza(Lv.c[0], Lv.c[1], Lv.c[2]), X, Y);
+	if (RGBA) {
+		//float4 Texture = tex3D(gTexDensityRGBA, TexCoords.x, TexCoords.y, TexCoords.z);
+		//Lv = CColorXyz(Texture.x, Texture.y, Texture.z);
+		//printf("2 - COLOR - %a : %a : %a\n", Lv.c[0], Lv.c[1], Lv.c[2]);
+		pView->m_FrameEstimateXyza.Set(CColorXyza(Lv.c[0], Lv.c[1], Lv.c[2]), X, Y);
+	}
+	else {
+		pView->m_FrameEstimateXyza.Set(CColorXyza(Lv.c[0], Lv.c[1], Lv.c[2]), X, Y);
+	}
 }
 
-void SingleScattering(CScene* pScene, CScene* pDevScene, CCudaView* pView)
+void SingleScattering(CScene* pScene, CScene* pDevScene, CCudaView* pView, bool RGBA)
 {
 	const dim3 KernelBlock(KRNL_SS_BLOCK_W, KRNL_SS_BLOCK_H);
 	const dim3 KernelGrid((int)ceilf((float)pScene->m_Camera.m_Film.m_Resolution.GetResX() / (float)KernelBlock.x), (int)ceilf((float)pScene->m_Camera.m_Film.m_Resolution.GetResY() / (float)KernelBlock.y));
 	
-	KrnlSingleScattering<<<KernelGrid, KernelBlock>>>(pDevScene, pView);
+	KrnlSingleScattering<<<KernelGrid, KernelBlock>>>(pDevScene, pView, RGBA);
 	cudaThreadSynchronize();
 	HandleCudaKernelError(cudaGetLastError(), "Single Scattering");
 }

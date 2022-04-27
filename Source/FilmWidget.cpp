@@ -155,6 +155,12 @@ void QFilmWidget::SetPresetType(const QString& PresetType)
 
 void QFilmWidget::SetPreset(QFilmResolutionPreset& Preset)
 {
+	// uncomment to try the cycle camera pos functionality
+	/*if (Preset.GetWidth() == 1280) {
+		gCamera.CycleCameraParams();
+		return;
+	}*/
+
 	m_WidthSpinner.setValue(Preset.GetWidth());
 	m_HeightSpinner.setValue(Preset.GetHeight());
 }

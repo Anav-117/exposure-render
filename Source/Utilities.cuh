@@ -14,6 +14,8 @@
 #pragma once
 
 #include <cuda_runtime.h>
+DEV float Rx, Ry, Rz;
+DEV bool isRGBA;
 
 DEV inline Vec3f ToVec3f(const float3& V)
 {
@@ -27,15 +29,47 @@ DEV float GetNormalizedIntensity(const Vec3f& P)
 	return (Intensity - gIntensityMin) * gIntensityInvRange;
 }
 
-DEV float GetOpacity(const float& NormalizedIntensity)
-{
-	return tex1D(gTexOpacity, NormalizedIntensity);
+DEV void SetResolution(float gRx, float gRy, float gRz) {
+	Rx = gRx;
+	Ry = gRy;
+	Rz = gRz;
 }
 
-DEV CColorRgbHdr GetDiffuse(const float& NormalizedIntensity)
+DEV void SetRGBA(bool gisRGBA) {
+	isRGBA = gisRGBA;
+}
+
+DEV float GetOpacity(const float& NormalizedIntensity, float3 P)
 {
-	float4 Diffuse = tex1D(gTexDiffuse, NormalizedIntensity);
-	return CColorRgbHdr(Diffuse.x, Diffuse.y, Diffuse.z);
+	//printf("%f\n", isRGBA);
+	if (isRGBA) {
+		//printf("Using RGBA");
+		uchar4 Opacity = tex3D(gTexOpacityRGBA, P.x*Rx, P.y*Ry, P.z*Rz);  
+		//printf("%f\n", Rx);
+		//printf("OPACITY - %f\n", (float)Opacity.w/255.0f);
+		//printf("POS - %f : %f : %f", P.x*100.0f, P.y*100.0f, P.z*100.0f);
+		return ((float)Opacity.w/2550.0f);
+		//return 0.5f;
+	}
+	else {
+		//printf("Using TF");
+		return tex1D(gTexOpacity, NormalizedIntensity);
+	}
+}
+
+DEV CColorRgbHdr GetDiffuse(const float& NormalizedIntensity, float3 P)
+{
+	if (isRGBA) {
+		uchar4 Diffuse = tex3D(gTexDiffuseRGBA, P.x*Rx, P.y*Ry, P.z*Rz);				//P.x*708.0f, P.y*580.0f, P.z*271.0f); //P.x*220.0f, P.y*245.0f, P.z*218.0f);
+		//printf("COLOR - %f : %f : %f\n", (float)Diffuse.x+50.0f, (float)Diffuse.y/2.0f, (float)Diffuse.z/2.0f);
+		return CColorRgbHdr((float)Diffuse.x/255.0f, (float)Diffuse.y/255.0f, (float)Diffuse.z/255.0f);
+		//return CColorRgbHdr(0, 255, 0);
+	}
+	else  {
+		float4 Diffuse = tex1D(gTexDiffuse, NormalizedIntensity);
+		//printf("COLOR - %f : %f : %f\n", (float)Diffuse.x, (float)Diffuse.y, (float)Diffuse.z);
+		return CColorRgbHdr((float)Diffuse.x, (float)Diffuse.y, (float)Diffuse.z);
+	}
 }
 
 DEV CColorRgbHdr GetSpecular(const float& NormalizedIntensity)
@@ -46,7 +80,9 @@ DEV CColorRgbHdr GetSpecular(const float& NormalizedIntensity)
 
 DEV float GetRoughness(const float& NormalizedIntensity)
 {
-	return tex1D(gTexRoughness, NormalizedIntensity);
+	float rough = tex1D(gTexRoughness, NormalizedIntensity);
+	//printf("%f\n", rough);
+	return rough;
 }
 
 DEV CColorRgbHdr GetEmission(const float& NormalizedIntensity)

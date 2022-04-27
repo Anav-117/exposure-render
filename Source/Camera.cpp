@@ -14,8 +14,14 @@
 #include "Stable.h"
 
 #include "Camera.h"
+#include <iostream>
 
 QCamera gCamera;
+
+vector<Vec3f> CameraFroms;
+vector<Vec3f> CameraTargets;
+vector<Vec3f> CameraUps;
+int index = 0;
 
 QCamera::QCamera(QObject* pParent /*= NULL*/) :
 	QPresetXML(pParent),
@@ -27,6 +33,12 @@ QCamera::QCamera(QObject* pParent /*= NULL*/) :
 	m_Target(0.5f),
 	m_Up(0.0f, 1.0f, 0.0f)
 {
+	CameraFroms.push_back(Vec3f(-0.0572543, 0.481313, -0.449298));
+	CameraTargets.push_back(Vec3f(0.436045, 0.549919, 0.478464));
+	CameraUps.push_back(Vec3f(-0.295448, 0.777145, -0.555657));
+	CameraFroms.push_back(10.0f);
+	CameraTargets.push_back(0.0f);
+	CameraUps.push_back(Vec3f(1.0f, .0f, 0.0f));
 }
 
 QCamera::~QCamera(void)
@@ -57,6 +69,22 @@ QCamera& QCamera::operator=(const QCamera& Other)
 	emit Changed();
 
 	return *this;
+}
+
+void QCamera::CycleCameraParams(void) {
+
+	index++;
+	if (index == CameraFroms.size()) {
+		index = 0;
+	}
+
+	std::cout << GetFrom().x;
+
+	SetFrom(CameraFroms[index]);
+	SetTarget(CameraTargets[index]);
+	SetUp(CameraUps[index]);
+
+	std::cout << GetFrom().x;
 }
 
 QFilm& QCamera::GetFilm(void)

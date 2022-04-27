@@ -47,7 +47,9 @@ DEV inline bool SampleDistanceRM(CRay& R, CRNG& RNG, Vec3f& Ps)
 		if (MinT[TID] > MaxT[TID])
 			return false;
 		
-		SigmaT	= gDensityScale * GetOpacity(GetNormalizedIntensity(Ps));
+		//printf("POS - %f : %f : %f\n", Ps.x, Ps.y, Ps.z);
+
+		SigmaT	= gDensityScale * GetOpacity(GetNormalizedIntensity(Ps), make_float3(Ps.x, Ps.y, Ps.z));
 
 		Sum			+= SigmaT * gStepSize;
 		MinT[TID]	+= gStepSize;
@@ -83,7 +85,7 @@ DEV inline bool FreePathRM(CRay& R, CRNG& RNG)
 		if (MinT[TID] > MaxT[TID])
 			return false;
 		
-		SigmaT	= gDensityScale * GetOpacity(GetNormalizedIntensity(Ps[TID]));
+		SigmaT	= gDensityScale * GetOpacity(GetNormalizedIntensity(Ps[TID]), make_float3(Ps[TID].x, Ps[TID].y, Ps[TID].z));
 
 		Sum			+= SigmaT * gStepSizeShadow;
 		MinT[TID]	+= gStepSizeShadow;
@@ -110,7 +112,7 @@ DEV inline bool NearestIntersection(CRay R, CScene* pScene, float& T)
 	{
 		Ps = R.m_O + T * R.m_D;
 
-		if (GetOpacity(GetNormalizedIntensity(Ps)) > 0.0f)
+		if (GetOpacity(GetNormalizedIntensity(Ps), make_float3(Ps.x, Ps.y, Ps.z)) > 0.0f)
 			return true;
 
 		T += gStepSize;

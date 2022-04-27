@@ -34,6 +34,8 @@ public:
 public slots:
 	void Open(void);
 	void Open(QString FilePath);
+	void OpenRGBA(QString FilePath);
+	void OpenRGBA(void);
 	void OpenRecentFile(void);
 	void Close(void);
 	void Exit(void);
@@ -77,6 +79,7 @@ private:
 	QAppearanceDockWidget				m_AppearanceDockWidget;
 	QStatisticsDockWidget				m_StatisticsDockWidget;
 	QCameraDockWidget					m_CameraDockWidget;
+	QCameraDockWidget				    m_CameraPosDockWidget;
 	QSettingsDockWidget					m_SettingsDockWidget;
 
 	enum

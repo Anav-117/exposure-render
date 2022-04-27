@@ -37,6 +37,9 @@
 #include <vtkErrorCode.h>
 #include <vtkImageGradient.h>
 #include <vtkExtractVectorComponents.h>
+#include <vtkImageExtractComponents.h>
+#include <vtkImageAppendComponents.h>
+#include <vtkImageReader2Factory.h>
 
 // Render thread
 QRenderThread* gpRenderThread = NULL;
@@ -120,6 +123,7 @@ QRenderThread::QRenderThread(const QString& FileName, QObject* pParent /*= NULL*
 	m_FileName(FileName),
 	m_pRenderImage(NULL),
 	m_pDensityBuffer(NULL),
+	m_pDensityBufferRGBA(NULL),
 	m_pGradientMagnitudeBuffer(NULL),
 	m_Abort(false),
 	m_Pause(false),
@@ -137,6 +141,7 @@ QRenderThread::QRenderThread(const QRenderThread& Other)
 QRenderThread::~QRenderThread(void)
 {
 	free(m_pDensityBuffer);
+	free(m_pDensityBufferRGBA);
 }
 
 QRenderThread& QRenderThread::operator=(const QRenderThread& Other)
@@ -144,6 +149,8 @@ QRenderThread& QRenderThread::operator=(const QRenderThread& Other)
 	m_FileName					= Other.m_FileName;
 	m_pRenderImage				= Other.m_pRenderImage;
 	m_pDensityBuffer			= Other.m_pDensityBuffer;
+	m_pDensityBufferRGBA		= Other.m_pDensityBufferRGBA;
+	RGBAVolume					= Other.RGBAVolume;
 	m_pGradientMagnitudeBuffer	= Other.m_pGradientMagnitudeBuffer;
 	m_Abort						= Other.m_Abort;
 	m_Pause						= Other.m_Pause;
@@ -180,7 +187,10 @@ void QRenderThread::run()
 	// Bind density buffer to texture
 	Log("Copying density volume to device", "grid");
 	gStatus.SetStatisticChanged("CUDA Memory", "Density Buffer", QString::number(gScene.m_Resolution.GetNoElements() * sizeof(short) / MB, 'f', 2), "MB");
-	BindDensityBuffer((short*)m_pDensityBuffer, Res);
+	if (!RGBAVolume) 
+		BindDensityBuffer((short*)m_pDensityBuffer, Res);
+	else 
+		BindDensityBufferRGBA((uchar4*)m_pDensityBufferRGBA, Res);
 
 	// Bind gradient magnitude buffer to texture
 	Log("Copying gradient magnitude to device", "grid");
@@ -352,20 +362,20 @@ bool QRenderThread::Load(QString& FileName)
 
 	if (!FileInfo.exists())
 	{
-		Log(QString(QFileInfo(FileName).filePath().replace("//", "/")).toAscii() + "  does not exist!", QLogger::Critical);
+		Log(QString(QFileInfo(FileName).filePath().replace("//", "/")).toLatin1() + "  does not exist!", QLogger::Critical);
 		return false;
 	}
 
-	Log(QString("Loading " + QFileInfo(FileName).fileName()).toAscii());
+	Log(QString("Loading " + QFileInfo(FileName).fileName()).toLatin1());
 
 	// Exit if the reader can't read the file
-	if (!MetaImageReader->CanReadFile(m_FileName.toAscii()))
+	if (!MetaImageReader->CanReadFile(m_FileName.toLatin1()))
 	{
-		Log(QString("Meta image reader can't read file " + QFileInfo(FileName).fileName()).toAscii(), QLogger::Critical);
+		Log(QString("Meta image reader can't read file " + QFileInfo(FileName).fileName()).toLatin1(), QLogger::Critical);
 		return false;
 	}
 
-	MetaImageReader->SetFileName(m_FileName.toAscii());
+	MetaImageReader->SetFileName(m_FileName.toLatin1());
 
 	MetaImageReader->Update();
 
@@ -379,7 +389,7 @@ bool QRenderThread::Load(QString& FileName)
 	
 	Log("Casting volume data type to short", "grid");
 
-	ImageCast->SetInput(MetaImageReader->GetOutput());
+	ImageCast->SetInputConnection(MetaImageReader->GetOutputPort());
 	ImageCast->SetOutputScalarTypeToShort();
 	ImageCast->Update();
 
@@ -394,6 +404,7 @@ bool QRenderThread::Load(QString& FileName)
 	gScene.m_Resolution.SetResXYZ(Vec3i(pVolumeResolution[1] + 1, pVolumeResolution[3] + 1, pVolumeResolution[5] + 1));
 
 	Log("Resolution: " + FormatSize(gScene.m_Resolution.GetResXYZ()) + "", "grid");
+	gScene.m_RGBA = false;
 
 	// Intensity range
 	double* pIntensityRange = ImageCast->GetOutput()->GetScalarRange();
@@ -433,7 +444,7 @@ bool QRenderThread::Load(QString& FileName)
 	Log("Creating gradient magnitude volume", "grid");
 		
 	GradientMagnitude->SetDimensionality(3);
-	GradientMagnitude->SetInput(ImageCast->GetOutput());
+	GradientMagnitude->SetInputConnection(ImageCast->GetOutputPort());
 	GradientMagnitude->Update();
 
 	vtkImageData* GradientMagnitudeBuffer = GradientMagnitude->GetOutput();
@@ -495,6 +506,179 @@ bool QRenderThread::Load(QString& FileName)
 	gStatus.SetStatisticChanged("Volume", "No. Voxels", QString::number(gScene.m_Resolution.GetNoElements()), "Voxels");
 	gStatus.SetStatisticChanged("Volume", "Density Range", "[" + QString::number(gScene.m_IntensityRange.GetMin()) + ", " + QString::number(gScene.m_IntensityRange.GetMax()) + "]", "");
 	
+	return true;
+}
+
+bool QRenderThread::LoadRGBA(QString& FileName)
+{
+	m_FileName = FileName;
+
+	RGBAVolume = true;
+
+	// Create meta image reader
+	vtkSmartPointer<vtkMetaImageReader> MetaImageReader = vtkMetaImageReader::New();
+
+	QFileInfo FileInfo(FileName);
+
+	if (!FileInfo.exists())
+	{
+		Log(QString(QFileInfo(FileName).filePath().replace("//", "/")).toLatin1() + "  does not exist!", QLogger::Critical);
+		return false;
+	}
+
+	Log(QString("Loading " + QFileInfo(FileName).fileName()).toLatin1());
+
+	// Exit if the reader can't read the file
+	if (!MetaImageReader->CanReadFile(m_FileName.toLatin1()))
+	{
+		Log(QString("Meta image reader can't read file " + QFileInfo(FileName).fileName()).toLatin1(), QLogger::Critical);
+		return false;
+	}
+
+	MetaImageReader->SetFileName(m_FileName.toLatin1());
+	MetaImageReader->SetNumberOfScalarComponents(4);
+	MetaImageReader->SetDataScalarTypeToUnsignedChar();
+
+	MetaImageReader->Update();
+
+	if (MetaImageReader->GetErrorCode() != vtkErrorCode::NoError)
+	{
+		Log("Error loading file " + QString(vtkErrorCode::GetStringFromErrorCode(MetaImageReader->GetErrorCode())));
+		return false;
+	}
+
+	vtkSmartPointer<vtkImageCast> ImageCast = vtkImageCast::New();
+
+	Log("Casting volume data type to short", "grid");
+
+	ImageCast->SetInputConnection(MetaImageReader->GetOutputPort());
+	ImageCast->SetOutputScalarTypeToShort();
+	ImageCast->Update();
+
+	if (ImageCast->GetErrorCode() != vtkErrorCode::NoError)
+	{
+		Log("vtkImageCast error: " + QString(vtkErrorCode::GetStringFromErrorCode(MetaImageReader->GetErrorCode())));
+		return false;
+	}
+
+	// Volume resolution
+	int* pVolumeResolution = MetaImageReader->GetOutput()->GetExtent();
+	gScene.m_Resolution.SetResXYZ(Vec3i(pVolumeResolution[1] + 1, pVolumeResolution[3] + 1, pVolumeResolution[5] + 1));
+
+	Log("Resolution: " + FormatSize(gScene.m_Resolution.GetResXYZ()) + "", "grid");
+	gScene.m_RGBA = true;
+
+	// Intensity range
+	double* pIntensityRange = ImageCast->GetOutput()->GetScalarRange();
+	gScene.m_IntensityRange.SetMin((float)pIntensityRange[0]);
+	gScene.m_IntensityRange.SetMax((float)pIntensityRange[1]);
+
+	Log("Intensity range: [" + QString::number(gScene.m_IntensityRange.GetMin()) + ", " + QString::number(gScene.m_IntensityRange.GetMax()) + "]", "grid");
+
+	// Spacing
+	double* pSpacing = MetaImageReader->GetOutput()->GetSpacing();
+
+	gScene.m_Spacing.x = (float)pSpacing[0];
+	gScene.m_Spacing.y = (float)pSpacing[1];
+	gScene.m_Spacing.z = (float)pSpacing[2];
+
+	Log("Spacing: " + FormatSize(gScene.m_Spacing, 2), "grid");
+
+	// Compute physical size
+	const Vec3f PhysicalSize(Vec3f(gScene.m_Spacing.x * (float)gScene.m_Resolution.GetResX(), gScene.m_Spacing.y * (float)gScene.m_Resolution.GetResY(), gScene.m_Spacing.z * (float)gScene.m_Resolution.GetResZ()));
+
+	// Compute the volume's bounding box
+	gScene.m_BoundingBox.m_MinP = Vec3f(0.0f);
+	gScene.m_BoundingBox.m_MaxP = PhysicalSize / PhysicalSize.Max();
+
+	gScene.m_GradientDelta = 1.0f / (float)gScene.m_Resolution.GetMax();
+
+	Log("Bounding box: " + FormatVector(gScene.m_BoundingBox.m_MinP, 2) + " - " + FormatVector(gScene.m_BoundingBox.m_MaxP), "grid");
+
+	const int DensityBufferSize = gScene.m_Resolution.GetNoElements() * sizeof(uchar4);
+
+	m_pDensityBufferRGBA = (uchar4*)malloc(DensityBufferSize);
+	memcpy(m_pDensityBufferRGBA, MetaImageReader->GetOutput()->GetScalarPointer(), DensityBufferSize);
+
+	vtkSmartPointer<vtkImageExtractComponents> RGBVolume = vtkImageExtractComponents::New();
+	RGBVolume->SetInputConnection(ImageCast->GetOutputPort());
+	RGBVolume->SetComponents(0);
+	RGBVolume->Update();
+
+	// Gradient magnitude volume
+	vtkSmartPointer<vtkImageGradientMagnitude> GradientMagnitude = vtkImageGradientMagnitude::New();
+
+	Log("Creating gradient magnitude volume", "grid");
+
+	GradientMagnitude->SetDimensionality(3);
+	GradientMagnitude->SetInputConnection(ImageCast->GetOutputPort());
+	GradientMagnitude->Update();
+
+	vtkImageData* GradientMagnitudeBuffer = GradientMagnitude->GetOutput();
+
+	// Scalar range of the gradient magnitude
+	double* pGradientMagnitudeRange = GradientMagnitudeBuffer->GetScalarRange();
+
+	gScene.m_GradientMagnitudeRange.SetMin((float)pGradientMagnitudeRange[0]);
+	gScene.m_GradientMagnitudeRange.SetMax((float)pGradientMagnitudeRange[1]);
+
+	Log("Gradient magnitude range: [" + QString::number(gScene.m_GradientMagnitudeRange.GetMin(), 'f', 2) + " - " + QString::number(gScene.m_GradientMagnitudeRange.GetMax(), 'f', 2) + "]", "grid");
+
+	const int GradientMagnitudeBufferSize = gScene.m_Resolution.GetNoElements() * sizeof(short);
+
+	// loading DensityBuffer
+	m_pGradientMagnitudeBuffer = (short*)malloc(GradientMagnitudeBufferSize);
+	memcpy(m_pGradientMagnitudeBuffer, GradientMagnitudeBuffer->GetScalarPointer(), GradientMagnitudeBufferSize);
+
+	// Build the histogram
+	Log("Creating gradient magnitude histogram", "grid");
+
+	vtkSmartPointer<vtkImageAccumulate> GradMagHistogram = vtkSmartPointer<vtkImageAccumulate>::New();
+
+	vtkSmartPointer<vtkImageExtractComponents> RGBVolume2 = vtkImageExtractComponents::New();
+	RGBVolume2->SetInputConnection(GradientMagnitude->GetOutputPort());
+	RGBVolume2->SetComponents(0, 1, 2);
+	RGBVolume2->Update();
+
+	GradMagHistogram->SetInputConnection(RGBVolume2->GetOutputPort());
+	GradMagHistogram->SetComponentExtent(0, 255, 0, 0, 0, 0);
+	GradMagHistogram->SetComponentOrigin(0, 0, 0);
+	GradMagHistogram->SetComponentSpacing(gScene.m_GradientMagnitudeRange.GetRange() / 256.0f, 0, 0);
+	GradMagHistogram->IgnoreZeroOn();
+	GradMagHistogram->Update();
+
+	gScene.m_GradMagMean = (float)GradMagHistogram->GetMean()[0];
+	gScene.m_GradientFactor = gScene.m_GradMagMean;
+
+	Log("Mean gradient magnitude: " + QString::number(gScene.m_GradMagMean, 'f', 2), "grid");
+
+	Log("Creating density histogram", "grid");
+
+	//Build the histogram
+	vtkSmartPointer<vtkImageAccumulate> Histogram = vtkSmartPointer<vtkImageAccumulate>::New();
+
+	Log("Creating histogram", "grid");
+
+	Histogram->SetInputConnection(RGBVolume->GetOutputPort());
+	Histogram->SetComponentExtent(0, 256, 0, 0, 0, 0);
+	Histogram->SetComponentOrigin(gScene.m_IntensityRange.GetMin(), 0, 0);
+	Histogram->SetComponentSpacing(gScene.m_IntensityRange.GetRange() / 256.0f, 0, 0);
+	Histogram->IgnoreZeroOn();
+	Histogram->Update();
+
+	//Update the histogram in the transfer function
+	gHistogram.SetBins((int*)Histogram->GetOutput()->GetScalarPointer(), 256);
+
+	gStatus.SetStatisticChanged("Volume", "File", QFileInfo(m_FileName).fileName(), "");
+	gStatus.SetStatisticChanged("Volume", "Bounding Box", "", "");
+	gStatus.SetStatisticChanged("Bounding Box", "Min", FormatVector(gScene.m_BoundingBox.m_MinP, 2), "m");
+	gStatus.SetStatisticChanged("Bounding Box", "Max", FormatVector(gScene.m_BoundingBox.m_MaxP, 2), "m");
+	gStatus.SetStatisticChanged("Volume", "Physical Size", FormatSize(PhysicalSize, 2), "mm");
+	gStatus.SetStatisticChanged("Volume", "Resolution", FormatSize(gScene.m_Resolution.GetResXYZ()), "Voxels");
+	gStatus.SetStatisticChanged("Volume", "Spacing", FormatSize(gScene.m_Spacing, 2), "mm");
+	gStatus.SetStatisticChanged("Volume", "No. Voxels", QString::number(gScene.m_Resolution.GetNoElements()), "Voxels");
+	gStatus.SetStatisticChanged("Volume", "Density Range", "[" + QString::number(gScene.m_IntensityRange.GetMin()) + ", " + QString::number(gScene.m_IntensityRange.GetMax()) + "]", "");
+
 	return true;
 }
 
@@ -578,9 +762,9 @@ void QRenderThread::OnUpdateCamera(void)
  		gScene.m_DirtyFlags.SetFlag(FilmResolutionDirty);
 	}
 
-// 	gScene.m_Camera.m_From	= gCamera.GetFrom();
-// 	gScene.m_Camera.m_Target	= gCamera.GetTarget();
-// 	gScene.m_Camera.m_Up		= gCamera.GetUp();
+ 	gScene.m_Camera.m_From	= gCamera.GetFrom();
+ 	gScene.m_Camera.m_Target	= gCamera.GetTarget();
+ 	gScene.m_Camera.m_Up		= gCamera.GetUp();
 
 	gScene.m_Camera.Update();
 
@@ -658,9 +842,21 @@ void StartRenderThread(QString& FileName)
  	gpRenderThread = new QRenderThread(FileName);
 
 	// Load the volume
- 	if (!gpRenderThread->Load(FileName))
- 		return;
- 
+	if (!gpRenderThread->Load(FileName))
+		return;
+	// Start the render thread
+	gpRenderThread->start();
+}
+
+void StartRenderThreadRGBA(QString& FileName)
+{
+
+	// Create new render thread
+	gpRenderThread = new QRenderThread(FileName);
+
+	// Load the volume
+	if (!gpRenderThread->LoadRGBA(FileName))
+		return;
 	// Start the render thread
 	gpRenderThread->start();
 }

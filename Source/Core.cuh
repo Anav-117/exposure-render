@@ -21,8 +21,10 @@ class CScene;
 class CVariance;
 
 extern "C" void BindDensityBuffer(short* pBuffer, cudaExtent Extent);
+extern "C" void BindDensityBufferRGBA(uchar4* pBuffer, cudaExtent Extent);
 extern "C" void BindGradientMagnitudeBuffer(short* pBuffer, cudaExtent Extent);
 extern "C" void UnbindDensityBuffer(void);
+extern "C" void UnbindDensityBufferRGBA(void);
 extern "C" void UnbindGradientMagnitudeBuffer(void);
 extern "C" void BindRenderCanvasView(const CResolution2D& Resolution);
 extern "C" void ResetRenderCanvasView(void);
