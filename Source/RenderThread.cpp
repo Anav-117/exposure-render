@@ -703,29 +703,18 @@ bool QRenderThread::LoadRGBA(QString& FileName)
 		return false;
 	}
 
-	// vtkSmartPointer<vtkImageCast> ImageCast = vtkImageCast::New();
+	vtkSmartPointer<vtkImageCast> ImageCast = vtkImageCast::New();
 	
-	// Log("Casting volume data type to short", "grid");
+	Log("Casting volume data type to short", "grid");
 
-	// ImageCast->SetInputConnection(MetaImageReader->GetOutputPort());
-	// ImageCast->SetOutputScalarTypeToShort();
-	// ImageCast->Update();
-	// if (ImageCast->GetErrorCode() != vtkErrorCode::NoError)
-	// {
-	// 	Log("vtkImageCast error: " + QString(vtkErrorCode::GetStringFromErrorCode(MetaImageReader->GetErrorCode())));
-	// 	return false;
-	// }
-	
-	int* pVolumeResolutionSegment = reader->GetOutput()->GetExtent();
-	gScene.m_ResolutionSegment.SetResXYZ(Vec3i(pVolumeResolutionSegment[1] + 1, pVolumeResolutionSegment[3] + 1, pVolumeResolutionSegment[5] + 1));
-
-	std::cout <<"\nAttempting to set segment volume\n";
-
-	const long DensityBufferSizeRGB = gScene.m_ResolutionSegment.GetNoElements() * sizeof(uchar4);
- 	m_pDensityBufferRGB = (uchar4*)malloc(DensityBufferSizeRGB);
-	memcpy(m_pDensityBufferRGB, reader->GetOutput()->GetScalarPointer(), DensityBufferSizeRGB);
-
-	std::cout<<"Segement Volume Set\n";
+	ImageCast->SetInputConnection(MetaImageReader->GetOutputPort());
+	ImageCast->SetOutputScalarTypeToShort();
+	ImageCast->Update();
+	if (ImageCast->GetErrorCode() != vtkErrorCode::NoError)
+	{
+		Log("vtkImageCast error: " + QString(vtkErrorCode::GetStringFromErrorCode(MetaImageReader->GetErrorCode())));
+		return false;
+	}
 
 	std::cout <<"Attempting to set volume\n";
 
@@ -736,20 +725,20 @@ bool QRenderThread::LoadRGBA(QString& FileName)
 	Log("Resolution: " + FormatSize(gScene.m_Resolution.GetResXYZ()) + "", "grid");
 	gScene.m_RGBA = true;
 
-	const long DensityBufferSize = gScene.m_Resolution.GetNoElements() * sizeof(uchar4);
+	const int DensityBufferSize = gScene.m_Resolution.GetNoElements() * sizeof(uchar4);
  	m_pDensityBufferRGBA = (uchar4*)malloc(DensityBufferSize);
 	memcpy(m_pDensityBufferRGBA, MetaImageReader->GetOutput()->GetScalarPointer(), DensityBufferSize);
 
 	std::cout<<"Volume Set\n";
 
 	// Intensity range
-	double* pIntensityRange = MetaImageReader->GetOutput()->GetScalarRange();
+	double* pIntensityRange = ImageCast->GetOutput()->GetScalarRange();
 	gScene.m_IntensityRange.SetMin((float)pIntensityRange[0]);
 	gScene.m_IntensityRange.SetMax((float)pIntensityRange[1]);
 
 	Log("Intensity range: [" + QString::number(gScene.m_IntensityRange.GetMin()) + ", " + QString::number(gScene.m_IntensityRange.GetMax()) + "]", "grid");
 	// Spacing
-	double* pSpacing = MetaImageReader->GetOutput()->GetSpacing();
+	double* pSpacing = ImageCast->GetOutput()->GetSpacing();
 
 	std::cout<<"1\n";
 
@@ -772,23 +761,39 @@ bool QRenderThread::LoadRGBA(QString& FileName)
 
 	vtkSmartPointer<vtkImageExtractComponents> RGBVolume = vtkImageExtractComponents::New();
 	RGBVolume->SetInputConnection(MetaImageReader->GetOutputPort());
-	RGBVolume->SetComponents(0);
+	RGBVolume->SetComponents(0, 1, 2);
 	RGBVolume->Update();
 
 	std::cout<<"2.1\n";
 
-	// vtkSmartPointer<vtkImageRGBToHSI> HSIVolume = vtkImageRGBToHSI::New();
-	// HSIVolume->SetInputConnection(RGBVolume->GetOutputPort());
-	// HSIVolume->Update();
+	vtkSmartPointer<vtkImageRGBToHSI> HSIVolume = vtkImageRGBToHSI::New();
+	HSIVolume->SetInputConnection(RGBVolume->GetOutputPort());
+	HSIVolume->Update();
 
-	// std::cout<<"2.2\n";
+	std::cout<<"2.2\n";
 
-	// vtkSmartPointer<vtkImageExtractComponents> IntensityVolume = vtkImageExtractComponents::New();
-	// IntensityVolume->SetInputConnection(HSIVolume->GetOutputPort());
-	// IntensityVolume->SetComponents(2);
-	// IntensityVolume->Update();
+	vtkSmartPointer<vtkImageExtractComponents> IntensityVolume = vtkImageExtractComponents::New();
+	IntensityVolume->SetInputConnection(HSIVolume->GetOutputPort());
+	IntensityVolume->SetComponents(2);
+	IntensityVolume->Update();
 	
 	std::cout<<"3\n";
+
+	vtkSmartPointer<vtkImageAppendComponents> append = vtkImageAppendComponents::New();
+	append->SetInputConnection(reader->GetOutputPort());
+	append->SetInputConnection(IntensityVolume->GetOutputPort());
+	append->Update();
+
+	int* pVolumeResolutionSegment = reader->GetOutput()->GetExtent();
+	gScene.m_ResolutionSegment.SetResXYZ(Vec3i(pVolumeResolutionSegment[1] + 1, pVolumeResolutionSegment[3] + 1, pVolumeResolutionSegment[5] + 1));
+
+	std::cout <<"\nAttempting to set segment volume\n";
+
+	const int DensityBufferSizeRGB = gScene.m_ResolutionSegment.GetNoElements() * sizeof(uchar4);
+ 	m_pDensityBufferRGB = (uchar4*)malloc(DensityBufferSizeRGB);
+	memcpy(m_pDensityBufferRGB, reader->GetOutput()->GetScalarPointer(), DensityBufferSizeRGB);
+
+	std::cout<<"Segement Volume Set\n";
 
 	//std::cout<<RGBVolume->GetOutput()<<std::endl;
 	//std::cout<<IntensityVolume->GetOutput();
@@ -799,7 +804,7 @@ bool QRenderThread::LoadRGBA(QString& FileName)
 	Log("Creating gradient magnitude volume", "grid");
 		
 	GradientMagnitude->SetDimensionality(3);
-	GradientMagnitude->SetInputConnection(RGBVolume->GetOutputPort());
+	GradientMagnitude->SetInputConnection(IntensityVolume->GetOutputPort());
 	GradientMagnitude->Update();
 
 	vtkImageData* GradientMagnitudeBuffer = GradientMagnitude->GetOutput();
@@ -813,7 +818,7 @@ bool QRenderThread::LoadRGBA(QString& FileName)
 	
 	Log("Gradient magnitude range: [" + QString::number(gScene.m_GradientMagnitudeRange.GetMin(), 'f', 2) + " - " + QString::number(gScene.m_GradientMagnitudeRange.GetMax(), 'f', 2) + "]", "grid");
 	
-	const long GradientMagnitudeBufferSize = gScene.m_Resolution.GetNoElements() * sizeof(short);
+	const int GradientMagnitudeBufferSize = gScene.m_Resolution.GetNoElements() * sizeof(short);
 	
 	m_pGradientMagnitudeBuffer = (short*)malloc(GradientMagnitudeBufferSize);
 	memcpy(m_pGradientMagnitudeBuffer, GradientMagnitudeBuffer->GetScalarPointer(), GradientMagnitudeBufferSize);
@@ -848,7 +853,7 @@ bool QRenderThread::LoadRGBA(QString& FileName)
 
 	Log("Creating histogram", "grid");
 
- 	Histogram->SetInputConnection(RGBVolume->GetOutputPort());
+ 	Histogram->SetInputConnection(IntensityVolume->GetOutputPort());
  	Histogram->SetComponentExtent(0, 256, 0, 0, 0, 0);
  	Histogram->SetComponentOrigin(gScene.m_IntensityRange.GetMin(), 0, 0);
  	Histogram->SetComponentSpacing(gScene.m_IntensityRange.GetRange() / 256.0f, 0, 0);
