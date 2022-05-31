@@ -38,13 +38,10 @@ DEV float GetNormalizedIntensity(const Vec3f& P)
 	}
 }
 
-DEV void SetResolution(float gRx, float gRy, float gRz, float gRSx, float gRSy, float gRSz) {
+DEV void SetResolution(float gRx, float gRy, float gRz) {
 	Rx = gRx;
 	Ry = gRy;
 	Rz = gRz;
-	RSx = gRSx;
-	RSy = gRSy;
-	RSz = gRSz;
 }
 
 DEV void SetRGBA(bool gisRGBA) {
@@ -56,7 +53,7 @@ DEV float GetOpacity(const float& NormalizedIntensity, float3 P)
 	if (isRGBA) {
 		uchar4 Opacity = tex3D(gTexOpacityRGBA, P.x*Rx, P.y*Ry, P.z*Rz); 
 		//printf("OPACITY - %f : %f : %f : %f\n", (float)Opacity.x, (float)Opacity.y, (float)Opacity.z, (float)Opacity.w); 
-		uchar4 SegmentColor = tex3D(gTexOpacityRGB, P.y*RSy, P.x*RSx, P.z*RSz);
+		uchar4 SegmentColor = tex3D(gTexOpacityRGB, P.y*Ry, P.x*Rx, P.z*Rz);
 		//printf("Segment - %f : %f : %f\n", (float)SegmentColor.x, (float)SegmentColor.y, (float)SegmentColor.z); 
 		if ((float)SegmentColor.x == 252.0f && (float)SegmentColor.y == 140.0f && (float)SegmentColor.z == 161.0f) {
 			return 1.0f;//((float)Opacity.w/255);

@@ -732,7 +732,7 @@ bool QRenderThread::LoadRGBA(QString& FileName)
 	std::cout<<"Volume Set\n";
 
 	// Intensity range
-	double* pIntensityRange = ImageCast->GetOutput()->GetScalarRange();
+	double* pIntensityRange = MetaImageReader->GetOutput()->GetScalarRange();
 	gScene.m_IntensityRange.SetMin((float)pIntensityRange[0]);
 	gScene.m_IntensityRange.SetMax((float)pIntensityRange[1]);
 
@@ -804,7 +804,7 @@ bool QRenderThread::LoadRGBA(QString& FileName)
 	Log("Creating gradient magnitude volume", "grid");
 		
 	GradientMagnitude->SetDimensionality(3);
-	GradientMagnitude->SetInputConnection(IntensityVolume->GetOutputPort());
+	GradientMagnitude->SetInputConnection(ImageCast->GetOutputPort());
 	GradientMagnitude->Update();
 
 	vtkImageData* GradientMagnitudeBuffer = GradientMagnitude->GetOutput();
