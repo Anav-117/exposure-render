@@ -14,14 +14,12 @@
 #include "Stable.h"
 
 #include "Camera.h"
+
+#include <fstream>
+#include <sstream>
 #include <iostream>
 
 QCamera gCamera;
-
-vector<Vec3f> CameraFroms;
-vector<Vec3f> CameraTargets;
-vector<Vec3f> CameraUps;
-int index = 0;
 
 QCamera::QCamera(QObject* pParent /*= NULL*/) :
 	QPresetXML(pParent),
@@ -33,12 +31,6 @@ QCamera::QCamera(QObject* pParent /*= NULL*/) :
 	m_Target(0.5f),
 	m_Up(0.0f, 1.0f, 0.0f)
 {
-	CameraFroms.push_back(Vec3f(-0.0572543, 0.481313, -0.449298));
-	CameraTargets.push_back(Vec3f(0.436045, 0.549919, 0.478464));
-	CameraUps.push_back(Vec3f(-0.295448, 0.777145, -0.555657));
-	CameraFroms.push_back(10.0f);
-	CameraTargets.push_back(0.0f);
-	CameraUps.push_back(Vec3f(1.0f, .0f, 0.0f));
 }
 
 QCamera::~QCamera(void)
@@ -71,20 +63,74 @@ QCamera& QCamera::operator=(const QCamera& Other)
 	return *this;
 }
 
-void QCamera::CycleCameraParams(void) {
+void QCamera::LoadCameraPoses(string FileName) {
+	//std::cout << "started"; // CameraFroms.size();
 
-	index++;
-	if (index == CameraFroms.size()) {
-		index = 0;
+	fstream Froms;
+	bool UpLoaded = false;
+
+	ifstream f(FileName);
+	if (!f.good()) {
+		std::cout << "POSE FILE UNAVAILABLE";
+		CameraUps.push_back(Vec3f(0.0f, 1.0f, 0.0f));
+		CameraFroms.push_back(Vec3f(1.0f));
+		return;
 	}
 
-	std::cout << GetFrom().x;
+	//std::cout << FileName;
 
-	SetFrom(CameraFroms[index]);
-	SetTarget(CameraTargets[index]);
-	SetUp(CameraUps[index]);
+	Froms.open(FileName, ios::in);
 
-	std::cout << GetFrom().x;
+	const size_t last_slash_idx = FileName.rfind('/');
+	if (std::string::npos != last_slash_idx)
+	{
+		PoseFileDir = FileName.substr(0, last_slash_idx);
+	}
+
+	string tp;
+	while (getline(Froms, tp)) { 
+		 stringstream ss(tp);
+		 float vec[3];
+		 int i = 0;
+		 while (ss.good()) {
+			 string substr;
+			 getline(ss, substr, ',');
+			 vec[i++] = stof(substr);
+		 }
+		 if (!UpLoaded) {
+			 CameraUps.push_back(Vec3f(vec[0], vec[1], vec[2]));
+			 UpLoaded = true;
+		 }
+		 else {
+			 CameraFroms.push_back(Vec3f(vec[0], vec[1], vec[2]));
+		 }
+	}
+	Froms.close();
+
+	SetUp(CameraUps[0]);
+}
+
+bool QCamera::CycleCameraParams(void) {
+	if (poseIndex >= CameraFroms.size()) {
+		poseIndex = 0;
+		return false;
+	}
+
+	//std::cout << CameraFroms.size() << std::endl;
+
+	SetFrom(Vec3f(CameraFroms[poseIndex].x / Resolution.x, CameraFroms[poseIndex].y / Resolution.y, CameraFroms[poseIndex].z / Resolution.z));
+	//std::cout << poseIndex << std::endl;
+
+	poseIndex++;
+	return true;
+}
+
+string QCamera::GetPoseFileDir(void) {
+	return PoseFileDir;
+}
+
+void QCamera::SetResolution(Vec3f Res) {
+	Resolution = Res;
 }
 
 QFilm& QCamera::GetFilm(void)
@@ -167,10 +213,14 @@ void QCamera::ReadXML(QDomElement& Parent)
 {
 	QPresetXML::ReadXML(Parent);
 
-	m_Film.ReadXML(Parent.firstChildElement("Film"));
-	m_Aperture.ReadXML(Parent.firstChildElement("Aperture"));
-	m_Projection.ReadXML(Parent.firstChildElement("Projection"));
-	m_Focus.ReadXML(Parent.firstChildElement("Focus"));
+	auto film = Parent.firstChildElement("Film");
+	m_Film.ReadXML(film);
+	auto ap = Parent.firstChildElement("Aperture");
+	m_Aperture.ReadXML(ap);
+	auto proj = Parent.firstChildElement("Projection");
+	m_Projection.ReadXML(proj);
+	auto focus = Parent.firstChildElement("Focus");
+	m_Focus.ReadXML(focus);
 
 	ReadVectorElement(Parent, "From", m_From.x, m_From.y, m_From.z);
 	ReadVectorElement(Parent, "Target", m_Target.x, m_Target.y, m_Target.z);

@@ -19,11 +19,9 @@
 DEV CColorXyz EstimateDirectLight(CScene* pScene, const CVolumeShader::EType& Type, const float& Density, CLight& Light, CLightingSample& LS, const Vec3f& Wo, const Vec3f& Pe, const Vec3f& N, CRNG& RNG)
 {
 	CColorXyz Ld = SPEC_BLACK, Li = SPEC_BLACK, F = SPEC_BLACK;
-
-	//printf("%f\n", GetRoughness(Density));
-
-	CVolumeShader Shader(Type, N, Wo, GetDiffuse(Density, make_float3(Pe.x, Pe.y, Pe.z)).ToXYZ(), GetSpecular(Density).ToXYZ(), 2.5f/*pScene->m_IOR*/, GetRoughness(Density));
 	
+	CVolumeShader Shader(Type, N, Wo, GetDiffuse(Density, make_float3(Pe.x, Pe.y, Pe.z)).ToXYZ(), GetSpecular(Density).ToXYZ(), 2.5f/*pScene->m_IOR*/, GetRoughness(Density));
+
 	CRay Rl; 
 
 	float LightPdf = 1.0f, ShaderPdf = 1.0f;
@@ -43,9 +41,11 @@ DEV CColorXyz EstimateDirectLight(CScene* pScene, const CVolumeShader::EType& Ty
 	if (!Li.IsBlack() && ShaderPdf > 0.0f && LightPdf > 0.0f && !FreePathRM(Rl, RNG))
 	{
 		const float WeightMIS = PowerHeuristic(1.0f, LightPdf, 1.0f, ShaderPdf);
-		
+
 		if (Type == CVolumeShader::Brdf)
 			Ld += F * Li * AbsDot(Wi, N) * WeightMIS / LightPdf;
+			//printf("N - %f : %f : %f\n", N.x, N.y, N.z);
+			//printf("Ld - %f : %f : %f\n", (float)Ld.c[0], (float)Ld.c[1], (float)Ld.c[2]);
 
 		if (Type == CVolumeShader::Phase)
 			Ld += F * Li * WeightMIS / LightPdf;

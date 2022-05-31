@@ -40,7 +40,7 @@ QAboutDialog::QAboutDialog(QWidget* pParent /*= NULL*/) :
 
 	QString AboutString;
 
-	AboutString += "<b>About Exposure Render (EDITED!!!!!!)</b>";
+	AboutString += "<b>About Exposure Render</b>";
 	AboutString += "<p>This application accompanies the paper on : <b>Raytraced Lighting in Direct Volume Rendering (DVR)</b></p>";
 	AboutString += "<p>Current version: " + Settings.value("version", "1.1.0").toString() + "</p>";
 	AboutString += "<p>Exposure Render uses the following libraries/toolkits:</p>";

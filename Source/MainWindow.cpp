@@ -39,7 +39,6 @@ CMainWindow::CMainWindow() :
 	m_AppearanceDockWidget(),
 	m_StatisticsDockWidget(),
 	m_CameraDockWidget(),
-	m_CameraPosDockWidget(),
 	m_SettingsDockWidget()
 {
 	gpMainWindow = this;
@@ -152,12 +151,6 @@ void CMainWindow::SetupDockingWidgets()
     addDockWidget(Qt::RightDockWidgetArea, &m_CameraDockWidget);
     m_pViewMenu->addAction(m_CameraDockWidget.toggleViewAction());
 
-	// Camera Positions dock widget
-	m_CameraPosDockWidget.setEnabled(false);
-	m_CameraPosDockWidget.setAllowedAreas(Qt::AllDockWidgetAreas);
-	addDockWidget(Qt::RightDockWidgetArea, &m_CameraPosDockWidget);
-	m_pViewMenu->addAction(m_CameraPosDockWidget.toggleViewAction());
-
 	// Log dock widget
 	m_LogDockWidget.setEnabled(false);
 	m_LogDockWidget.setAllowedAreas(Qt::AllDockWidgetAreas);
@@ -177,7 +170,6 @@ void CMainWindow::SetupDockingWidgets()
 //  m_pViewMenu->addAction(m_SettingsDockWidget.toggleViewAction());
 
 	tabifyDockWidget(&m_AppearanceDockWidget, &m_LightingDockWidget);
-	tabifyDockWidget(&m_CameraDockWidget, &m_CameraPosDockWidget);
 //	tabifyDockWidget(&m_LightingDockWidget, &m_CameraDockWidget);
 //	tabifyDockWidget(&m_CameraDockWidget, &m_SettingsDockWidget);
 
@@ -243,7 +235,7 @@ QString CMainWindow::StrippedName(const QString& FullFileName)
 void CMainWindow::Open()
 {
 	// Create open file dialog
-	QString FileName = GetOpenFileName("Open volume", "Meta Image Volume Files (*.mhd)", "grid");
+    QString FileName = GetOpenFileName("Open volume", "Meta Image Volume Files (*.mhd)", "grid");
 
 	// Exit empty
 	if (FileName.isEmpty())
@@ -275,7 +267,7 @@ void CMainWindow::Open(QString FilePath)
 	SetCurrentFile(FilePath);
 
 	// Make string suitable for VTK
-	FilePath.replace("/", "\\\\");
+	//FilePath.replace("/", "\\\\");
 
  	if (!FilePath.isEmpty())
  		StartRenderThread(FilePath);
@@ -327,7 +319,6 @@ void CMainWindow::OnRenderBegin(void)
 	m_AppearanceDockWidget.setEnabled(true);
 	m_StatisticsDockWidget.setEnabled(true);
 	m_CameraDockWidget.setEnabled(true);
-	m_CameraPosDockWidget.setEnabled(true);
 	m_SettingsDockWidget.setEnabled(true);
 	m_LogDockWidget.setEnabled(true);
 }
@@ -346,7 +337,6 @@ void CMainWindow::OnRenderEnd(void)
 	m_AppearanceDockWidget.setEnabled(false);
 	m_StatisticsDockWidget.setEnabled(false);
 	m_CameraDockWidget.setEnabled(false);
-	m_CameraPosDockWidget.setEnabled(false);
 	m_SettingsDockWidget.setEnabled(false);
 	m_LogDockWidget.setEnabled(false);
 }

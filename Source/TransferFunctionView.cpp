@@ -88,7 +88,7 @@ void QTFView::resizeEvent(QResizeEvent* pResizeEvent)
 	setSceneRect(rect());
 }
 
-void QTFView::SetHistogram(QHistogram& Histogram)
+void QTFView::SetHistogram(const QHistogram& Histogram)
 {
 	m_HistogramItem.SetHistogram(Histogram);
 }

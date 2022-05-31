@@ -79,7 +79,6 @@ private:
 	QAppearanceDockWidget				m_AppearanceDockWidget;
 	QStatisticsDockWidget				m_StatisticsDockWidget;
 	QCameraDockWidget					m_CameraDockWidget;
-	QCameraDockWidget				    m_CameraPosDockWidget;
 	QSettingsDockWidget					m_SettingsDockWidget;
 
 	enum

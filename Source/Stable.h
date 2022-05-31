@@ -15,7 +15,7 @@
 
 //#include <QtCore>
 #include <QtWidgets>
-#include <QtXml\qdom.h>
+#include <QtXml/qdom.h>
 #include <QNetworkAccessManager>
 
 #include "Utilities.h"

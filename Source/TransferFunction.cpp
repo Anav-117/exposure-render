@@ -63,7 +63,7 @@ QTransferFunction& QTransferFunction::operator = (const QTransferFunction& Other
 	// Notify others that the function has changed selection has changed
 	emit Changed();
 
-	SetSelectedNode(NULL);
+	SetSelectedNode(nullptr);
 
 	return *this;
 }

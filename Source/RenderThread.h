@@ -20,7 +20,7 @@ class QFrameBuffer
 public:
 	QFrameBuffer(void);
 	QFrameBuffer(const QFrameBuffer& Other);
-	QFrameBuffer& QFrameBuffer::operator=(const QFrameBuffer& Other);
+	QFrameBuffer& operator=(const QFrameBuffer& Other);
 	virtual ~QFrameBuffer(void);
 	void Set(unsigned char* pPixels, const int& Width, const int& Height);
 	unsigned char* GetPixels(void) { return m_pPixels; }
@@ -47,12 +47,13 @@ public:
 	QRenderThread(const QString& FileName = "", QObject* pParent = NULL);
 	QRenderThread(const QRenderThread& Other);
 	virtual ~QRenderThread(void);
-	QRenderThread& QRenderThread::operator=(const QRenderThread& Other);
+	QRenderThread& operator=(const QRenderThread& Other);
 
 	void run();
 
 	bool			Load(QString& FileName);
-	bool			LoadRGBA(QString& Filename);
+	bool			LoadRGBA(QString& FileName);
+
 	QString			GetFileName(void) const						{	return m_FileName;		}
 	void			SetFileName(const QString& FileName)		{	m_FileName = FileName;	}
 	CColorRgbLdr*	GetRenderImage(void) const;
@@ -64,10 +65,11 @@ private:
 //	CCudaFrameBuffers	m_CudaFrameBuffers;
 	CColorRgbLdr*		m_pRenderImage;
 	short*				m_pDensityBuffer;
+	uchar4*				m_pDensityBufferRGB;
 	uchar4*				m_pDensityBufferRGBA;
 	short*				m_pGradientMagnitudeBuffer;
 	bool				RGBAVolume = false;
-		
+
 
 public:
 	bool			m_Abort;

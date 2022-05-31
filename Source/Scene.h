@@ -33,7 +33,7 @@ public:
 public:
 	HO CDenoiseParams(void);
 
-	HOD CDenoiseParams& CDenoiseParams::operator=(const CDenoiseParams& Other)
+	HOD CDenoiseParams& operator=(const CDenoiseParams& Other)
 	{
 		m_Enabled			= Other.m_Enabled;
 		m_Noise				= Other.m_Noise;
@@ -65,6 +65,7 @@ public:
 	CCamera				m_Camera;
 	CLighting			m_Lighting;
 	CResolution3D		m_Resolution;
+	CResolution3D		m_ResolutionSegment;
 	CFlags				m_DirtyFlags;
 	Vec3f				m_Spacing;
 	Vec3f				m_Scale;
