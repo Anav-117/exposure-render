@@ -553,32 +553,6 @@ bool QRenderThread::LoadRGBA(QString& FileName)
   	// std::array<unsigned char, 4> bkg{{51, 77, 102, 255}};
   	// colors->SetColor("BkgColor", bkg.data());
 
-	QString file = QString::fromStdString("/home/anav/ExposureRenderer/SegmentVolume/TestSegmentVolume_Cropped.mhd");
-	std::cout<<file.toStdString()<<"\n";
-
-	vtkSmartPointer<vtkMetaImageReader> reader = vtkMetaImageReader::New();
-	m_FileName = file;
-
-	if (!reader->CanReadFile(m_FileName.toLatin1()))
-	{
-		std::cout << "BAD FILE\n";
-		return false;
-	}
-
-	reader->SetFileName(m_FileName.toLatin1());
-	reader->SetNumberOfScalarComponents(4);
-	reader->SetDataScalarTypeToUnsignedChar();
-	reader->Update();
-
-	if (reader->GetErrorCode() != vtkErrorCode::NoError)
-	{
-		std::cout<<"Error loading file "<<QString(vtkErrorCode::GetStringFromErrorCode(reader->GetErrorCode())).toStdString()<<"\n";
-		return false;
-	}
-	else {
-		std::cout<<"Segment Volume Read\n";
-	}
-
 	// vtkSmartPointer<vtkImageThreshold> VolumeThreshold = vtkImageThreshold::New();
 	// VolumeThreshold->SetInputConnection(reader->GetOutputPort());
 	// VolumeThreshold->SetInValue(255);
@@ -671,6 +645,33 @@ bool QRenderThread::LoadRGBA(QString& FileName)
 	gCamera.LoadCameraPoses(PoseTraceFile);
 	//std::cout << PosTraceFile;
 	
+	string SegmentFile = rawname + "_Segments.mhd";
+
+	vtkSmartPointer<vtkMetaImageReader> reader = vtkMetaImageReader::New();
+
+	if (!reader->CanReadFile(QString::fromStdString(SegmentFile).toLatin1()))
+	{
+		std::cout << "Cannot read Segment Volume\n";
+		gScene.m_SegmentAvailable = false;
+	}
+	else {
+		gScene.m_SegmentAvailable = true;
+	}
+
+	if (gScene.m_SegmentAvailable) {
+		reader->SetFileName(QString::fromStdString(SegmentFile).toLatin1());
+		reader->SetNumberOfScalarComponents(3);
+		reader->SetDataScalarTypeToUnsignedChar();
+		reader->Update();
+
+		if (reader->GetErrorCode() != vtkErrorCode::NoError)
+		{
+			std::cout<<"Error loading file "<<QString(vtkErrorCode::GetStringFromErrorCode(reader->GetErrorCode())).toStdString()<<"\n";
+		}
+		else {
+			std::cout<<"Segment Volume Read\n";
+		}
+	}
 	// Create meta image reader
 	vtkSmartPointer<vtkMetaImageReader> MetaImageReader = vtkMetaImageReader::New();
 
@@ -760,7 +761,7 @@ bool QRenderThread::LoadRGBA(QString& FileName)
 	Log("Bounding box: " + FormatVector(gScene.m_BoundingBox.m_MinP, 2) + " - " + FormatVector(gScene.m_BoundingBox.m_MaxP), "grid");
 
 	vtkSmartPointer<vtkImageExtractComponents> RGBVolume = vtkImageExtractComponents::New();
-	RGBVolume->SetInputConnection(MetaImageReader->GetOutputPort());
+	RGBVolume->SetInputConnection(ImageCast->GetOutputPort());
 	RGBVolume->SetComponents(0, 1, 2);
 	RGBVolume->Update();
 
@@ -779,21 +780,34 @@ bool QRenderThread::LoadRGBA(QString& FileName)
 	
 	std::cout<<"3\n";
 
-	vtkSmartPointer<vtkImageAppendComponents> append = vtkImageAppendComponents::New();
-	append->SetInputConnection(reader->GetOutputPort());
-	append->SetInputConnection(IntensityVolume->GetOutputPort());
-	append->Update();
+	if (gScene.m_SegmentAvailable) {	
+		vtkSmartPointer<vtkImageAppendComponents> append = vtkImageAppendComponents::New();
+		append->SetInputConnection(reader->GetOutputPort());
+		append->SetInputConnection(IntensityVolume->GetOutputPort());
+		append->Update();
 
-	int* pVolumeResolutionSegment = reader->GetOutput()->GetExtent();
-	gScene.m_ResolutionSegment.SetResXYZ(Vec3i(pVolumeResolutionSegment[1] + 1, pVolumeResolutionSegment[3] + 1, pVolumeResolutionSegment[5] + 1));
+		int* pVolumeResolutionSegment = reader->GetOutput()->GetExtent();
+		gScene.m_ResolutionSegment.SetResXYZ(Vec3i(pVolumeResolutionSegment[1] + 1, pVolumeResolutionSegment[3] + 1, pVolumeResolutionSegment[5] + 1));
 
-	std::cout <<"\nAttempting to set segment volume\n";
+		std::cout <<"\nAttempting to set segment volume\n";
 
-	const int DensityBufferSizeRGB = gScene.m_ResolutionSegment.GetNoElements() * sizeof(uchar4);
- 	m_pDensityBufferRGB = (uchar4*)malloc(DensityBufferSizeRGB);
-	memcpy(m_pDensityBufferRGB, reader->GetOutput()->GetScalarPointer(), DensityBufferSizeRGB);
+		const long DensityBufferSizeRGB = gScene.m_ResolutionSegment.GetNoElements() * sizeof(uchar4);
+		m_pDensityBufferRGB = (uchar4*)malloc(DensityBufferSizeRGB);
+		memcpy(m_pDensityBufferRGB, reader->GetOutput()->GetScalarPointer(), DensityBufferSizeRGB);
 
-	std::cout<<"Segement Volume Set\n";
+		std::cout<<"Segement Volume Set\n";
+	}
+	else {
+		int* pVolumeResolutionSegment = MetaImageReader->GetOutput()->GetExtent();
+		gScene.m_ResolutionSegment.SetResXYZ(Vec3i(pVolumeResolutionSegment[1] + 1, pVolumeResolutionSegment[3] + 1, pVolumeResolutionSegment[5] + 1));
+
+		std::cout <<"\nAttempting to set segment volume\n";
+
+		const int DensityBufferSizeRGB = gScene.m_ResolutionSegment.GetNoElements() * sizeof(uchar4);
+		m_pDensityBufferRGB = (uchar4*)malloc(DensityBufferSizeRGB);
+		memcpy(m_pDensityBufferRGB, MetaImageReader->GetOutput()->GetScalarPointer(), DensityBufferSizeRGB);
+
+	}
 
 	//std::cout<<RGBVolume->GetOutput()<<std::endl;
 	//std::cout<<IntensityVolume->GetOutput();
@@ -804,7 +818,7 @@ bool QRenderThread::LoadRGBA(QString& FileName)
 	Log("Creating gradient magnitude volume", "grid");
 		
 	GradientMagnitude->SetDimensionality(3);
-	GradientMagnitude->SetInputConnection(ImageCast->GetOutputPort());
+	GradientMagnitude->SetInputConnection(RGBVolume->GetOutputPort());
 	GradientMagnitude->Update();
 
 	vtkImageData* GradientMagnitudeBuffer = GradientMagnitude->GetOutput();
@@ -818,7 +832,7 @@ bool QRenderThread::LoadRGBA(QString& FileName)
 	
 	Log("Gradient magnitude range: [" + QString::number(gScene.m_GradientMagnitudeRange.GetMin(), 'f', 2) + " - " + QString::number(gScene.m_GradientMagnitudeRange.GetMax(), 'f', 2) + "]", "grid");
 	
-	const int GradientMagnitudeBufferSize = gScene.m_Resolution.GetNoElements() * sizeof(short);
+	const long GradientMagnitudeBufferSize = gScene.m_Resolution.GetNoElements() * sizeof(short);
 	
 	m_pGradientMagnitudeBuffer = (short*)malloc(GradientMagnitudeBufferSize);
 	memcpy(m_pGradientMagnitudeBuffer, GradientMagnitudeBuffer->GetScalarPointer(), GradientMagnitudeBufferSize);

@@ -19,6 +19,7 @@
 #include "StatisticsDockWidget.h"
 #include "CameraDockWidget.h"
 #include "SettingsDockWidget.h"
+#include "SelectiveOpacityDockWidget.h"
 #include "LogDockWidget.h"
 #include "VtkWidget.h"
 #include "HttpGet.h"
@@ -76,6 +77,7 @@ private:
 	// Dock widgets
 	QLogDockWidget						m_LogDockWidget;
 	QLightingDockWidget					m_LightingDockWidget;
+	QSelectiveOpacityDockWidget			m_SelectiveOpacityDockWidget;
 	QAppearanceDockWidget				m_AppearanceDockWidget;
 	QStatisticsDockWidget				m_StatisticsDockWidget;
 	QCameraDockWidget					m_CameraDockWidget;

@@ -17,10 +17,9 @@
 
 KERNEL void KrnlSingleScattering(CScene* pScene, CCudaView* pView, bool RGBA)
 {
-	SetResolution((float)pScene->m_Resolution.GetResX(), (float)pScene->m_Resolution.GetResY(), (float)pScene->m_Resolution.GetResZ());
-
-
-	SetRGBA(true);
+	SetResolution((float)pScene->m_Resolution.GetResX(), (float)pScene->m_Resolution.GetResY(), (float)pScene->m_Resolution.GetResZ(), (float)pScene->m_ResolutionSegment.GetResX(), (float)pScene->m_ResolutionSegment.GetResY(), (float)pScene->m_ResolutionSegment.GetResZ());
+	SetSegmentAvailable(pScene->m_SegmentAvailable);
+	SetRGBA(pScene->m_RGBA);
 
 	const int X		= blockIdx.x * blockDim.x + threadIdx.x;
 	const int Y		= blockIdx.y * blockDim.y + threadIdx.y;

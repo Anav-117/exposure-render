@@ -48,6 +48,7 @@ HOD CScene& CScene::operator=(const CScene& Other)
 	m_Camera					= Other.m_Camera;
 	m_Lighting					= Other.m_Lighting;
 	m_Resolution				= Other.m_Resolution;
+	m_ResolutionSegment			= Other.m_ResolutionSegment;
 	m_DirtyFlags				= Other.m_DirtyFlags;
 	m_Spacing					= Other.m_Spacing;
 	m_Scale						= Other.m_Scale;
@@ -64,6 +65,8 @@ HOD CScene& CScene::operator=(const CScene& Other)
 	m_GradientMagnitudeRange	= Other.m_GradientMagnitudeRange;
 	m_GradientFactor			= Other.m_GradientFactor;
 	m_GradMagMean				= Other.m_GradMagMean;
+	m_RGBA						= Other.m_RGBA;
+	m_SegmentAvailable			= Other.m_SegmentAvailable;
 
 	return *this;
 }

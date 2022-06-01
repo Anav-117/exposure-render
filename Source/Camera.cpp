@@ -71,7 +71,7 @@ void QCamera::LoadCameraPoses(string FileName) {
 
 	ifstream f(FileName);
 	if (!f.good()) {
-		std::cout << "POSE FILE UNAVAILABLE";
+		std::cout << "POSE FILE UNAVAILABLE\n";
 		CameraUps.push_back(Vec3f(0.0f, 1.0f, 0.0f));
 		CameraFroms.push_back(Vec3f(1.0f));
 		return;

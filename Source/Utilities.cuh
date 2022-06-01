@@ -17,7 +17,8 @@
 
 DEV float Rx, Ry, Rz;
 DEV float RSx, RSy, RSz;
-DEV bool isRGBA;
+DEV float DensityScale;
+DEV float isRGBA, SegmentAvailable;
 
 DEV inline Vec3f ToVec3f(const float3& V)
 {
@@ -38,31 +39,51 @@ DEV float GetNormalizedIntensity(const Vec3f& P)
 	}
 }
 
-DEV void SetResolution(float gRx, float gRy, float gRz) {
+DEV void SetResolution(float gRx, float gRy, float gRz, float gRSx, float gRSy, float gRSz) {
 	Rx = gRx;
 	Ry = gRy;
 	Rz = gRz;
+	RSx = gRSx;
+	RSy = gRSy;
+	RSz = gRSz;
+}
+
+DEV void SetSegmentAvailable(bool gSegmentAvailable) {
+	SegmentAvailable = gSegmentAvailable;
 }
 
 DEV void SetRGBA(bool gisRGBA) {
 	isRGBA = gisRGBA;
 }
 
+DEV float GetDensityScale () {
+	return DensityScale;
+}
+
 DEV float GetOpacity(const float& NormalizedIntensity, float3 P)
 {
 	if (isRGBA) {
 		uchar4 Opacity = tex3D(gTexOpacityRGBA, P.x*Rx, P.y*Ry, P.z*Rz); 
-		//printf("OPACITY - %f : %f : %f : %f\n", (float)Opacity.x, (float)Opacity.y, (float)Opacity.z, (float)Opacity.w); 
-		uchar4 SegmentColor = tex3D(gTexOpacityRGB, P.y*Ry, P.x*Rx, P.z*Rz);
-		//printf("Segment - %f : %f : %f\n", (float)SegmentColor.x, (float)SegmentColor.y, (float)SegmentColor.z); 
-		if ((float)SegmentColor.x == 252.0f && (float)SegmentColor.y == 140.0f && (float)SegmentColor.z == 161.0f) {
-			return 1.0f;//((float)Opacity.w/255);
+		//printf("%f\n", SegmentAvailable);
+		if (SegmentAvailable) {
+			uchar4 SegmentColor = tex3D(gTexOpacityRGB, P.y*RSy, P.x*RSx, P.z*RSz);
+			//printf("COLOR - %f\n", (float)SegmentColor.x);, (float)SegmentColor.y, (float)SegmentColor.z);
+			if ((float)SegmentColor.x == 252.0f && (float)SegmentColor.y == 140.0f && (float)SegmentColor.z == 161.0f) {
+				DensityScale = 100.0f;
+				return 1.0f;//((float)Opacity.w/255);
+			}
+			else {
+				DensityScale = 5.0f;
+				return 0.05f;
+			}
 		}
 		else {
-			return 0.05f;
+			DensityScale = gDensityScale;
+			return 1.0f;
 		}
 	}
 	else {
+		DensityScale = gDensityScale;
 		return tex1D(gTexOpacity, NormalizedIntensity);
 	}
 }

@@ -84,6 +84,7 @@ bool			RGBA = false;
 #include "Estimate.cuh"
 #include "Utilities.cuh"
 #include "SingleScattering.cuh"
+#include "MultipleScattering.cuh"
 #include "NearestIntersection.cuh"
 #include "SpecularBloom.cuh"
 #include "ToneMap.cuh"
@@ -524,7 +525,7 @@ void Render(const int& Type, CScene& Scene, CTiming& RenderImage, CTiming& BlurI
 
 		case 1:
 		{
-//			MultipleScattering(&Scene, pDevScene, RGBA);
+			MultipleScattering(&Scene, pDevScene, pDevView, RGBA);
 			break;
 		}
 	}

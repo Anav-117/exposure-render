@@ -36,6 +36,7 @@ CMainWindow::CMainWindow() :
 	m_VtkWidget(),
 	m_LogDockWidget(),
 	m_LightingDockWidget(),
+	m_SelectiveOpacityDockWidget(),
 	m_AppearanceDockWidget(),
 	m_StatisticsDockWidget(),
 	m_CameraDockWidget(),
@@ -139,6 +140,12 @@ void CMainWindow::SetupDockingWidgets()
     addDockWidget(Qt::RightDockWidgetArea, &m_LightingDockWidget);
     m_pViewMenu->addAction(m_LightingDockWidget.toggleViewAction());
 
+	// Lighting dock widget
+	m_SelectiveOpacityDockWidget.setEnabled(false);
+    m_SelectiveOpacityDockWidget.setAllowedAreas(Qt::AllDockWidgetAreas);
+    addDockWidget(Qt::RightDockWidgetArea, &m_SelectiveOpacityDockWidget);
+    m_pViewMenu->addAction(m_SelectiveOpacityDockWidget.toggleViewAction());
+
 	// Appearance dock widget
 	m_AppearanceDockWidget.setEnabled(false);
 	m_AppearanceDockWidget.setAllowedAreas(Qt::AllDockWidgetAreas);
@@ -170,6 +177,7 @@ void CMainWindow::SetupDockingWidgets()
 //  m_pViewMenu->addAction(m_SettingsDockWidget.toggleViewAction());
 
 	tabifyDockWidget(&m_AppearanceDockWidget, &m_LightingDockWidget);
+	tabifyDockWidget(&m_AppearanceDockWidget, &m_SelectiveOpacityDockWidget);
 //	tabifyDockWidget(&m_LightingDockWidget, &m_CameraDockWidget);
 //	tabifyDockWidget(&m_CameraDockWidget, &m_SettingsDockWidget);
 
@@ -316,6 +324,7 @@ void CMainWindow::OnRenderBegin(void)
 	Log("Rendering started", "control");
 
 	m_LightingDockWidget.setEnabled(true);
+	m_SelectiveOpacityDockWidget.setEnabled(true);
 	m_AppearanceDockWidget.setEnabled(true);
 	m_StatisticsDockWidget.setEnabled(true);
 	m_CameraDockWidget.setEnabled(true);
@@ -334,6 +343,7 @@ void CMainWindow::OnRenderEnd(void)
 	}
 
 	m_LightingDockWidget.setEnabled(false);
+	m_SelectiveOpacityDockWidget.setEnabled(false);
 	m_AppearanceDockWidget.setEnabled(false);
 	m_StatisticsDockWidget.setEnabled(false);
 	m_CameraDockWidget.setEnabled(false);

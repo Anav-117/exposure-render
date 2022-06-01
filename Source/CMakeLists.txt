@@ -98,6 +98,9 @@ SET(ExposureRenderSources
 	UpdateWidget.cpp
 	HttpGet.cpp
 
+	#SelectiveRendering
+	SelectiveOpacityDockWidget.cpp
+
 	# Lighting
 	LightWidget.cpp 
 	LightingDockWidget.cpp 
@@ -182,6 +185,9 @@ SET(ExposureRenderHeaders
 	HardwareWidget.h
 	UpdateWidget.h
 	HttpGet.h
+
+	#Selective Rendering
+	SelectiveOpacityDockWidget.h
 
 	# Lighting
 	LightWidget.h
@@ -273,6 +279,9 @@ SET(ExposureRenderMocHeaders
 	HardwareWidget.h
 	UpdateWidget.h
 	HttpGet.h
+
+	#Selective Rendering	
+	SelectiveOpacityDockWidget.h
 
 	# Lighting
 	LightWidget.h
@@ -445,6 +454,15 @@ SET(AppearanceSources
 
 # Make the appearance group
 SOURCE_GROUP("Appearance" FILES ${AppearanceSources})
+
+#Selective Rendering Sources
+SET(SelectiveRenderingSources
+	SelectiveOpacityDockWidget.h
+	SelectiveOpacityDockWidget.cpp
+)
+
+#Make the Selective Rendering group
+SOURCE_GROUP("Selective_Rendering" FILES ${SelectiveRenderingSources})
 
 # Lighting sources
 SET(LightingSources

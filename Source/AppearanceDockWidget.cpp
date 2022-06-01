@@ -28,11 +28,11 @@ QAppearanceWidget::QAppearanceWidget(QWidget* pParent) :
 	m_MainLayout.setAlignment(Qt::AlignTop);
 	setLayout(&m_MainLayout);
 
-	m_MainLayout.addWidget(&m_PresetsWidget, 0, 0);
-	m_MainLayout.addWidget(&m_AppearanceSettingsWidget, 1, 0);
-	m_MainLayout.addWidget(&m_TransferFunctionWidget, 2, 0);
-	m_MainLayout.addWidget(&m_NodeSelectionWidget, 3, 0);
-	m_MainLayout.addWidget(&m_NodePropertiesWidget, 4, 0);
+	//m_MainLayout.addWidget(&m_PresetsWidget, 0, 0);
+	m_MainLayout.addWidget(&m_AppearanceSettingsWidget, 0, 0);
+	m_MainLayout.addWidget(&m_TransferFunctionWidget, 1, 0);
+	m_MainLayout.addWidget(&m_NodeSelectionWidget, 2, 0);
+	m_MainLayout.addWidget(&m_NodePropertiesWidget, 3, 0);
 	
 	QObject::connect(&m_PresetsWidget, SIGNAL(LoadPreset(const QString&)), this, SLOT(OnLoadPreset(const QString&)));
 	QObject::connect(&gStatus, SIGNAL(LoadPreset(const QString&)), &m_PresetsWidget, SLOT(OnLoadPreset(const QString&)));
