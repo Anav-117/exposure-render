@@ -66,11 +66,15 @@ DEV float GetOpacity(const float& NormalizedIntensity, float3 P)
 		uchar4 Opacity = tex3D(gTexOpacityRGBA, P.x*Rx, P.y*Ry, P.z*Rz); 
 		//printf("%f\n", SegmentAvailable);
 		if (SegmentAvailable) {
-			uchar4 SegmentColor = tex3D(gTexOpacityRGB, P.y*RSy, P.x*RSx, P.z*RSz);
-			//printf("COLOR - %f\n", (float)SegmentColor.x);, (float)SegmentColor.y, (float)SegmentColor.z);
-			if ((float)SegmentColor.x == 252.0f && (float)SegmentColor.y == 140.0f && (float)SegmentColor.z == 161.0f) {
+			uchar4 SegmentColor = tex3D(gTexOpacityRGB, (RSx-P.x*RSx), P.y*RSy, P.z*RSz);
+			//printf("COLOR - %f : %f : %f\n", (float)SegmentColor.x, (float)SegmentColor.y, (float)SegmentColor.z);
+			if ((float)SegmentColor.x == 1.0f) {
 				DensityScale = 100.0f;
 				return 1.0f;//((float)Opacity.w/255);
+			}
+			else if ((float)SegmentColor.x == 2.0f){
+				DensityScale = 5.0f;
+				return 0.15f;
 			}
 			else {
 				DensityScale = 5.0f;

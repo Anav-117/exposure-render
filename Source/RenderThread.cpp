@@ -62,6 +62,7 @@
 #include <vtkVolumeProperty.h>
 #include <vtkImageGaussianSmooth.h>
 #include <vtkImageThreshold.h>
+#include <vtkNrrdReader.h>
 
 // Render thread
 QRenderThread* gpRenderThread = NULL;
@@ -648,6 +649,7 @@ bool QRenderThread::LoadRGBA(QString& FileName)
 	string SegmentFile = rawname + "_Segments.mhd";
 
 	vtkSmartPointer<vtkMetaImageReader> reader = vtkMetaImageReader::New();
+	//vtkSmartPointer<vtkNrrdReader> reader = vtkNrrdReader::New();
 
 	if (!reader->CanReadFile(QString::fromStdString(SegmentFile).toLatin1()))
 	{
@@ -660,7 +662,7 @@ bool QRenderThread::LoadRGBA(QString& FileName)
 
 	if (gScene.m_SegmentAvailable) {
 		reader->SetFileName(QString::fromStdString(SegmentFile).toLatin1());
-		reader->SetNumberOfScalarComponents(3);
+		reader->SetNumberOfScalarComponents(1);
 		reader->SetDataScalarTypeToUnsignedChar();
 		reader->Update();
 
@@ -783,19 +785,22 @@ bool QRenderThread::LoadRGBA(QString& FileName)
 	if (gScene.m_SegmentAvailable) {	
 		vtkSmartPointer<vtkImageAppendComponents> append = vtkImageAppendComponents::New();
 		append->SetInputConnection(reader->GetOutputPort());
-		append->SetInputConnection(IntensityVolume->GetOutputPort());
+		//append->AddInputConnection(IntensityVolume->GetOutputPort());
+		append->AddInputConnection(reader->GetOutputPort());
+		append->AddInputConnection(reader->GetOutputPort());
+		append->AddInputConnection(reader->GetOutputPort());
 		append->Update();
 
-		int* pVolumeResolutionSegment = reader->GetOutput()->GetExtent();
+		int* pVolumeResolutionSegment = append->GetOutput()->GetExtent();
 		gScene.m_ResolutionSegment.SetResXYZ(Vec3i(pVolumeResolutionSegment[1] + 1, pVolumeResolutionSegment[3] + 1, pVolumeResolutionSegment[5] + 1));
 
 		std::cout <<"\nAttempting to set segment volume\n";
 
 		const long DensityBufferSizeRGB = gScene.m_ResolutionSegment.GetNoElements() * sizeof(uchar4);
 		m_pDensityBufferRGB = (uchar4*)malloc(DensityBufferSizeRGB);
-		memcpy(m_pDensityBufferRGB, reader->GetOutput()->GetScalarPointer(), DensityBufferSizeRGB);
+		memcpy(m_pDensityBufferRGB, append->GetOutput()->GetScalarPointer(), DensityBufferSizeRGB);
 
-		std::cout<<"Segement Volume Set\n";
+		std::cout<<"Segment Volume Set\n";
 	}
 	else {
 		int* pVolumeResolutionSegment = MetaImageReader->GetOutput()->GetExtent();
