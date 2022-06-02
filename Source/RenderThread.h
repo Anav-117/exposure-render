@@ -59,6 +59,8 @@ public:
 	CColorRgbLdr*	GetRenderImage(void) const;
 	void			Close(void)									{	m_Abort = true;			}
 	void			PauseRendering(const bool& Pause)			{	m_Pause = Pause;		}
+	void 			SetOpacity(float* OpacityArray);
+	void 			SetDensityScale(float* DensityScaleArray);
 	
 private:
 	QString				m_FileName;
@@ -67,6 +69,7 @@ private:
 	short*				m_pDensityBuffer;
 	uchar4*				m_pDensityBufferRGB;
 	uchar4*				m_pDensityBufferRGBA;
+	float*				m_pOpacityBuffer;
 	short*				m_pGradientMagnitudeBuffer;
 	bool				RGBAVolume = false;
 

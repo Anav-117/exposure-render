@@ -3,8 +3,8 @@
 #include "SelectiveOpacityDockWidget.h"
 
 QSelectiveOpacityDockWidget::QSelectiveOpacityDockWidget(QWidget* pParent) :
-	QDockWidget(pParent)
-	//m_LightingWidget()
+	QDockWidget(pParent),
+	m_SelectiveOpacityWidget()
 {
 	// Window title and tooltip
 	setWindowTitle("Selective Opacity");
@@ -12,7 +12,7 @@ QSelectiveOpacityDockWidget::QSelectiveOpacityDockWidget(QWidget* pParent) :
 	setWindowIcon(GetIcon("light-bulb"));
 
 	// Apply widget
-	//setWidget(&m_LightingWidget);
+	setWidget(&m_SelectiveOpacityWidget);
 }
 
 QSelectiveOpacityDockWidget::~QSelectiveOpacityDockWidget() {}

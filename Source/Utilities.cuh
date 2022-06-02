@@ -62,23 +62,25 @@ DEV float GetDensityScale () {
 
 DEV float GetOpacity(const float& NormalizedIntensity, float3 P)
 {
+	DensityScale = gDensityScale;
 	if (isRGBA) {
-		uchar4 Opacity = tex3D(gTexOpacityRGBA, P.x*Rx, P.y*Ry, P.z*Rz); 
+		uchar4 Opacity = tex3D(gTexOpacityRGBA, P.x*Rx*2.0f, P.y*Ry, P.z*Rz*2.0f); 
+		//printf("Vectors - %f : %f : %f\n", P.x, P.y, P.z);
 		//printf("%f\n", SegmentAvailable);
 		if (SegmentAvailable) {
-			uchar4 SegmentColor = tex3D(gTexOpacityRGB, (RSx-P.x*RSx), P.y*RSy, P.z*RSz);
+			uchar4 SegmentColor = tex3D(gTexOpacityRGB, P.y*RSy, P.x*RSx*2.0f, P.z*RSz*2.0f);
 			//printf("COLOR - %f : %f : %f\n", (float)SegmentColor.x, (float)SegmentColor.y, (float)SegmentColor.z);
-			if ((float)SegmentColor.x == 1.0f) {
-				DensityScale = 100.0f;
+			if ((float)SegmentColor.x == 252.0f && (float)SegmentColor.y == 140	&& (float)SegmentColor.z == 161) {
+				//DensityScale = 100.0f;
 				return 1.0f;//((float)Opacity.w/255);
 			}
-			else if ((float)SegmentColor.x == 2.0f){
-				DensityScale = 5.0f;
-				return 0.15f;
-			}
+			//else if ((float)SegmentColor.x == 2.0f){
+				//DensityScale = 5.0f;
+			//	return 0.0005f;
+			//}
 			else {
-				DensityScale = 5.0f;
-				return 0.05f;
+				//DensityScale = 5.0f;
+				return 0.0f;
 			}
 		}
 		else {
@@ -95,7 +97,7 @@ DEV float GetOpacity(const float& NormalizedIntensity, float3 P)
 DEV CColorRgbHdr GetDiffuse(const float& NormalizedIntensity, float3 P)
 {
 	if (isRGBA) {
-		uchar4 Diffuse = tex3D(gTexDiffuseRGBA, P.x*Rx, P.y*Ry, P.z*Rz);
+		uchar4 Diffuse = tex3D(gTexDiffuseRGBA, P.x*Rx*2.0f, P.y*Ry, P.z*Rz*2.0f);
 		//printf("COLOR - %f : %f : %f\n", (float)Diffuse.x, (float)Diffuse.y, (float)Diffuse.z);
 		return CColorRgbHdr((float)Diffuse.x/255.0f, (float)Diffuse.y/255.0f, (float)Diffuse.z/255.0f);
 		//return CColorRgbHdr(0, 255, 0);

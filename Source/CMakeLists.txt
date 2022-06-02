@@ -100,6 +100,8 @@ SET(ExposureRenderSources
 
 	#SelectiveRendering
 	SelectiveOpacityDockWidget.cpp
+	SelectiveOpacityWidget.cpp
+	#SelectiveOpacity.cpp
 
 	# Lighting
 	LightWidget.cpp 
@@ -188,6 +190,8 @@ SET(ExposureRenderHeaders
 
 	#Selective Rendering
 	SelectiveOpacityDockWidget.h
+	SelectiveOpacityWidget.h
+	#SelectiveOpacity.h
 
 	# Lighting
 	LightWidget.h
@@ -282,6 +286,8 @@ SET(ExposureRenderMocHeaders
 
 	#Selective Rendering	
 	SelectiveOpacityDockWidget.h
+	SelectiveOpacityWidget.h
+	#SelectiveOpacity.h
 
 	# Lighting
 	LightWidget.h
@@ -459,6 +465,10 @@ SOURCE_GROUP("Appearance" FILES ${AppearanceSources})
 SET(SelectiveRenderingSources
 	SelectiveOpacityDockWidget.h
 	SelectiveOpacityDockWidget.cpp
+	SelectiveOpacityWidget.h
+	SelectiveOpacityWidget.cpp
+	#SelectiveOpacity.h
+	#SelectiveOpacity.cpp
 )
 
 #Make the Selective Rendering group

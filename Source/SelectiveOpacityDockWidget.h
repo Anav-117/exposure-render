@@ -1,6 +1,6 @@
 #pragma once
 
-#include "LightingWidget.h"
+#include "SelectiveOpacityWidget.h"
 
 class QSelectiveOpacityDockWidget : public QDockWidget
 {
@@ -11,5 +11,5 @@ public:
     virtual ~QSelectiveOpacityDockWidget();
 
 private:
-	QLightingWidget		m_LightingWidget;
+	QSelectiveOpacityWidget		m_SelectiveOpacityWidget;
 };

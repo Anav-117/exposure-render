@@ -234,6 +234,34 @@ unsigned char* GetDisplayEstimate(void)
 	return (unsigned char*)gRenderCanvasView.m_DisplayEstimateRgbLdr.GetPtr(0, 0);
 }
 
+void BindOpacityRGBA(float* pBuffer, int num) {
+	gTexOpacity.normalized		= true;
+	gTexOpacity.filterMode		= cudaFilterModeLinear;
+	gTexOpacity.addressMode[0]	= cudaAddressModeClamp;
+
+	gTexOpacityRGB.addressMode[0]	= cudaAddressModeClamp;  
+	gTexOpacityRGB.addressMode[1]	= cudaAddressModeClamp;
+  	gTexOpacityRGB.addressMode[2]	= cudaAddressModeClamp;
+
+	float* Opacity = new float[num];
+	for (int i = 0; i<num; i++) {
+		Opacity[i] = (float) pBuffer[i];
+	}
+
+	cudaChannelFormatDesc ChannelDescOpacity = cudaCreateChannelDesc<float>();
+
+	if (gpOpacityArray == NULL)
+		HandleCudaError(cudaMallocArray(&gpOpacityArray, &ChannelDescOpacity, num, 1));
+
+	HandleCudaError(cudaMemcpyToArray(gpOpacityArray, 0, 0, Opacity, num * sizeof(float), cudaMemcpyHostToDevice));
+	HandleCudaError(cudaBindTextureToArray(gTexOpacity, gpOpacityArray, ChannelDescOpacity));
+
+	cudaChannelFormatDesc ChannelDesc = cudaCreateChannelDesc<uchar4>();
+	HandleCudaError(cudaBindTextureToArray(gTexOpacityRGBA, gpDensityArray, ChannelDesc));
+	cudaChannelFormatDesc ChannelDescRGB = cudaCreateChannelDesc<uchar4>();
+	HandleCudaError(cudaBindTextureToArray(gTexOpacityRGB, gpDensityArrayRGB, ChannelDescRGB));
+}
+
 void BindTransferFunctionOpacity(CTransferFunction& TransferFunctionOpacity)
 {
 	gTexOpacity.normalized		= true;
@@ -244,20 +272,18 @@ void BindTransferFunctionOpacity(CTransferFunction& TransferFunctionOpacity)
 	gTexOpacityRGB.addressMode[1]	= cudaAddressModeClamp;
   	gTexOpacityRGB.addressMode[2]	= cudaAddressModeClamp;
 
-
-    if (RGBA) {
+	if (RGBA) {
 		cudaChannelFormatDesc ChannelDesc = cudaCreateChannelDesc<uchar4>();
 		HandleCudaError(cudaBindTextureToArray(gTexOpacityRGBA, gpDensityArray, ChannelDesc));
 		cudaChannelFormatDesc ChannelDescRGB = cudaCreateChannelDesc<uchar4>();
 		HandleCudaError(cudaBindTextureToArray(gTexOpacityRGB, gpDensityArrayRGB, ChannelDescRGB));
-		//printf("OPACITY COMPLETE\n");
 	}
 	else {
 		//printf("TF\n");
 		float Opacity[TF_NO_SAMPLES];	
 		for (int i = 0; i < TF_NO_SAMPLES; i++)
-			Opacity[i] = TransferFunctionOpacity.F((float)i * INV_TF_NO_SAMPLES).r;
-		
+		Opacity[i] = TransferFunctionOpacity.F((float)i * INV_TF_NO_SAMPLES).r;
+	
 		cudaChannelFormatDesc ChannelDesc = cudaCreateChannelDesc<float>();
 
 		if (gpOpacityArray == NULL)

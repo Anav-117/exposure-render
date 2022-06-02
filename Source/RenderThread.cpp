@@ -256,6 +256,10 @@ void QRenderThread::run()
 
 	ResetRenderCanvasView();
 
+	// const int OpacityBufferSize = gSelectiveOpacity.GetNumSegments() * sizeof(float);
+	// m_pOpacityBuffer = (float*)malloc(OpacityBufferSize);
+	// memcpy(m_pOpacityBuffer, gSelectiveOpacity.GetOpacityArray(), OpacityBufferSize);
+
 	try
 	{
 		while (!m_Abort)
@@ -313,7 +317,12 @@ void QRenderThread::run()
 
 			BindConstants(&SceneCopy);
 
-			BindTransferFunctionOpacity(SceneCopy.m_TransferFunctions.m_Opacity);
+			// if (SceneCopy.m_RGBA) {
+			// 	BindOpacityRGBA(m_pOpacityBuffer, gSelectiveOpacity.GetNumSegments());
+			// }
+			// else {
+				BindTransferFunctionOpacity(SceneCopy.m_TransferFunctions.m_Opacity);
+			//}
 			BindTransferFunctionDiffuse(SceneCopy.m_TransferFunctions.m_Diffuse);
 			BindTransferFunctionSpecular(SceneCopy.m_TransferFunctions.m_Specular);
 			BindTransferFunctionRoughness(SceneCopy.m_TransferFunctions.m_Roughness);
@@ -662,7 +671,7 @@ bool QRenderThread::LoadRGBA(QString& FileName)
 
 	if (gScene.m_SegmentAvailable) {
 		reader->SetFileName(QString::fromStdString(SegmentFile).toLatin1());
-		reader->SetNumberOfScalarComponents(1);
+		reader->SetNumberOfScalarComponents(4);
 		reader->SetDataScalarTypeToUnsignedChar();
 		reader->Update();
 
@@ -720,13 +729,14 @@ bool QRenderThread::LoadRGBA(QString& FileName)
 	}
 
 	std::cout <<"Attempting to set volume\n";
-
 	// Volume resolution
 	int* pVolumeResolution = MetaImageReader->GetOutput()->GetExtent();
 	gScene.m_Resolution.SetResXYZ(Vec3i(pVolumeResolution[1] + 1, pVolumeResolution[3] + 1, pVolumeResolution[5] + 1));
-	gCamera.SetResolution(Vec3f((float)gScene.m_Resolution.GetResX(), (float)gScene.m_Resolution.GetResY(), (float)gScene.m_Resolution.GetResZ()));
+	gCamera.SetResolution(Vec3f((float)gScene.m_Resolution.GetResX()*4.0f, (float)gScene.m_Resolution.GetResY(), (float)gScene.m_Resolution.GetResZ()*4.0f));
 	Log("Resolution: " + FormatSize(gScene.m_Resolution.GetResXYZ()) + "", "grid");
 	gScene.m_RGBA = true;
+
+	std::cout<<"Resolution - "<<gScene.m_Resolution.GetResX()<<" : "<<gScene.m_Resolution.GetResY()<<" : "<<gScene.m_Resolution.GetResZ()<<"\n";
 
 	const int DensityBufferSize = gScene.m_Resolution.GetNoElements() * sizeof(uchar4);
  	m_pDensityBufferRGBA = (uchar4*)malloc(DensityBufferSize);
@@ -791,14 +801,14 @@ bool QRenderThread::LoadRGBA(QString& FileName)
 		append->AddInputConnection(reader->GetOutputPort());
 		append->Update();
 
-		int* pVolumeResolutionSegment = append->GetOutput()->GetExtent();
+		int* pVolumeResolutionSegment = reader->GetOutput()->GetExtent();
 		gScene.m_ResolutionSegment.SetResXYZ(Vec3i(pVolumeResolutionSegment[1] + 1, pVolumeResolutionSegment[3] + 1, pVolumeResolutionSegment[5] + 1));
 
 		std::cout <<"\nAttempting to set segment volume\n";
 
 		const long DensityBufferSizeRGB = gScene.m_ResolutionSegment.GetNoElements() * sizeof(uchar4);
 		m_pDensityBufferRGB = (uchar4*)malloc(DensityBufferSizeRGB);
-		memcpy(m_pDensityBufferRGB, append->GetOutput()->GetScalarPointer(), DensityBufferSizeRGB);
+		memcpy(m_pDensityBufferRGB, reader->GetOutput()->GetScalarPointer(), DensityBufferSizeRGB);
 
 		std::cout<<"Segment Volume Set\n";
 	}
@@ -1092,3 +1102,11 @@ void KillRenderThread(void)
 	gpRenderThread = NULL;
 }
 
+
+void SetOpacity(float* OpacityArray) {
+
+}
+
+void SetDensityScale(float* DenstiyScaleArray) {
+
+}
