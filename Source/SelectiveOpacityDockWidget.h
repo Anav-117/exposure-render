@@ -1,6 +1,7 @@
 #pragma once
 
 #include "SelectiveOpacityWidget.h"
+//#include "MeshRenderWidget.h"
 
 class QSelectiveOpacityDockWidget : public QDockWidget
 {
@@ -12,4 +13,6 @@ public:
 
 private:
 	QSelectiveOpacityWidget		m_SelectiveOpacityWidget;
+    //QMeshRenderWidget           m_MeshRenderWidget;
+    //QGridLayout                 m_MainLayout;
 };

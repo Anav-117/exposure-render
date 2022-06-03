@@ -1,4 +1,6 @@
-//#include "SelectiveOpacity.h"
+#include <fstream>
+//#include <sstream>
+#include <QVTKOpenGLNativeWidget.h>
 
 #pragma once
 
@@ -14,6 +16,11 @@ public slots:
 	void OnRenderBegin(void);
     
 private:
-	QGridLayout		    m_MainLayout;
-	QTreeWidget			m_Tree;
+	QGridLayout		    	m_MainLayout;
+	QTreeWidget				m_Tree;
+	QDoubleSlider			m_OpacitySlider;
+	QDoubleSpinner			m_OpacitySpinner;
+	QVTKOpenGLNativeWidget	m_RenderWindow;
+
+	fstream				File;
 };
