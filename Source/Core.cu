@@ -277,18 +277,9 @@ void BindTextureSelectiveOpacity(float* Buffer, int BufferSize) {
 	float* hInput = (float*)malloc(sizeof(float) * WIDTH);
 	float*hOutput = (float*)malloc(sizeof(float) * WIDTH);
 
-	//printf("1\n");
-	
 	for (int i = 0; i < WIDTH; i++) {
-		if (i == 55 || i == 63 || i == 47 || i == 79) {
-			hInput[i] = 1.0f;//(float)Buffer[i];
-		}
-		else {
-			hInput[i] = 0.0f;
-		}
+		hInput[i] = (float)Buffer[i];
 	}
-
-	//printf("2\n");	
 
 	float* dInput = NULL, *dOutput = NULL;
 
@@ -326,7 +317,7 @@ void BindTextureSelectiveOpacity(float* Buffer, int BufferSize) {
 	//	printf("%f %d\t",hOutput[i], i);
 	//}
 
-
+	//printf("BUFFER SET FOR SO\n");
 }
 
 void BindTransferFunctionOpacity(CTransferFunction& TransferFunctionOpacity)

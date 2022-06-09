@@ -102,7 +102,7 @@ SET(ExposureRenderSources
 	SelectiveOpacityDockWidget.cpp
 	SelectiveOpacityWidget.cpp
 	#MeshRenderingWidget.cpp
-	#SelectiveOpacity.cpp
+	SelectiveOpacity.cpp
 
 	# Lighting
 	LightWidget.cpp 
@@ -192,8 +192,8 @@ SET(ExposureRenderHeaders
 	#Selective Rendering
 	SelectiveOpacityDockWidget.h
 	SelectiveOpacityWidget.h
-	MeshRenderingWidget.h
-	#SelectiveOpacity.h
+	#MeshRenderingWidget.h
+	SelectiveOpacity.h
 
 	# Lighting
 	LightWidget.h
@@ -289,8 +289,8 @@ SET(ExposureRenderMocHeaders
 	#Selective Rendering	
 	SelectiveOpacityDockWidget.h
 	SelectiveOpacityWidget.h
-	MeshRenderingWidget.h
-	#SelectiveOpacity.h
+	#MeshRenderingWidget.h
+	SelectiveOpacity.h
 
 	# Lighting
 	LightWidget.h
@@ -470,10 +470,10 @@ SET(SelectiveRenderingSources
 	SelectiveOpacityDockWidget.cpp
 	SelectiveOpacityWidget.h
 	SelectiveOpacityWidget.cpp
-	MeshRenderingWidget.h
+	#MeshRenderingWidget.h
 	#MeshRenderingWidget.cpp
-	#SelectiveOpacity.h
-	#SelectiveOpacity.cpp
+	SelectiveOpacity.h
+	SelectiveOpacity.cpp
 )
 
 #Make the Selective Rendering group

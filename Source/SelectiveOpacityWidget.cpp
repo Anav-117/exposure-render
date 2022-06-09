@@ -35,7 +35,7 @@ QSelectiveOpacityWidget::QSelectiveOpacityWidget(QWidget* pParent) :
     vector<string> temp;
     vector<string> temp2;
 
-    File.open("../Source/OutlinedStructure.csv", ios::in);
+    File.open("./OutlinedStructure.csv", ios::in);
     string line;
 
     int CurrentMajorClass = 1;
@@ -216,6 +216,17 @@ QSelectiveOpacityWidget::QSelectiveOpacityWidget(QWidget* pParent) :
     // //renderWindow->Render ();
 
     // m_MainLayout.addWidget(&m_RenderWindow, 4, 0);
+
+
+    max = OpacityArray[0][1];
+    for(int i=1; i<OpacityArray.size(); i++) {
+        if (OpacityArray[i][0] > max) {
+            max = OpacityArray[i][0];
+        }
+    }
+
+    Buffer = new float[max];
+
 }
 
 QSelectiveOpacityWidget::~QSelectiveOpacityWidget() {}
@@ -247,7 +258,7 @@ void QSelectiveOpacityWidget::OnSubChanged(int index) {
     MajorChanged = MinorChanged = false;
     Index = index;
     m_OpacitySpinnerWidget.setValue(OpacityArray[Index][1]);
-    std::cout<<"VALUE "<<OpacityArray[Index][1]<<"\n";
+    //std::cout<<"VALUE "<<OpacityArray[Index][1]<<"\n";
 }
 
 void QSelectiveOpacityWidget::OnSelection(QTreeWidgetItem* Item, int col) {
@@ -284,8 +295,8 @@ void QSelectiveOpacityWidget::OnSelection(QTreeWidgetItem* Item, int col) {
 void QSelectiveOpacityWidget::OnButtonClick() {
     if (SubChanged) {
         OpacityArray[Index][1] = (int)m_OpacitySpinnerWidget.value();
-        std::cout<<"CHANGED "<<OpacityArray[Index][1]<<"\n";
-        //ResetTex();
+        //std::cout<<"CHANGED "<<OpacityArray[Index][1]<<"\n";
+        ResetTex();
     }
 }
 
@@ -294,32 +305,20 @@ void QSelectiveOpacityWidget::OnSetOpacity(double Opacity) {
 }
 
 void QSelectiveOpacityWidget::ResetTex() {
-    int max = OpacityArray[0][1];
-    for(int i=1; i<OpacityArray.size(); i++) {
-        if (OpacityArray[i][0] > max) {
-            max = OpacityArray[i][0];
-        }
-    }
-    free(OpacityBuffer);
-
-    OpacityBuffer = new float[max];
-
     for (int i = 0; i < max; i++) {
-        OpacityBuffer[i] = 0.0f;
+        Buffer[i] = 0.0f;
     }
 
     for (int i = 0; i<OpacityArray.size(); i++) {
-        OpacityBuffer[OpacityArray[i][0]-1] = OpacityArray[i][1];
+        Buffer[OpacityArray[i][0]-1] = OpacityArray[i][1];
     }
 
+    gSelectiveOpacity.SetOpacityBuffer(Buffer);
+
     // for (int i = 0; i < max; i++) {
-    //     if (OpacityBuffer[i] > 0)
-    //         std::cout<<OpacityBuffer[i]<<"\n";
+    //     if (Buffer[i] > 0)
+    //         std::cout<<Buffer[i]<<"\n";
     // }
 
-    //BindTextureSelectiveOpacity(OpacityBuffer, max);
-}
-
-float* QSelectiveOpacityWidget::GetOpacityBuffer() {
-    return OpacityBuffer;
+    //BindTextureSelectiveOpacity(Buffer, max);
 }

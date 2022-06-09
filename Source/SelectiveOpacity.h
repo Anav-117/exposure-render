@@ -1,22 +1,24 @@
-class SelectiveOpacity {
+#include "Stable.h"
 
-public: 
-    SelectiveOpacity();
-    virtual ~SelectiveOpacity();
+#pragma once
 
-    void    InitOpacityArray(float* Opacity, int num);
-    void    InitDensityScaleArray(float* DensityScale, int num);
-    void    SetDensityScaleArray(float* Opacity);
-    void    SetOpacityArray(float* DensityScale);
-    float*  GetOpacityArray(void);
-    float*  GetDensityScaleArray(void);
-    void    SetNumSegments(int num);
-    int     GetNumSegments(void);
+class QSelectiveOpacity : public QObject
+{
+    Q_OBJECT
 
+public:
+    QSelectiveOpacity(QObject* pParent = NULL);
+    void SetOpacityBuffer(float *Buffer);
+    QSelectiveOpacity& operator = (const QSelectiveOpacity& Other);
+    float* GetOpacityBuffer();
+    virtual ~QSelectiveOpacity(void);
+
+signals:
+	void	Changed(void);
+	
 private:
-    float*  OpacityArray;
-    float*  DensityScaleArray;
-    int     NumSegments;
+    float*  OpacityBuffer;
 };
 
-extern SelectiveOpacity gSelectiveOpacity;
+// Transfer function singleton
+extern QSelectiveOpacity gSelectiveOpacity;

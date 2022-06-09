@@ -76,9 +76,7 @@ DEV float GetOpacity(const float& NormalizedIntensity, float3 P)
 			}
 
 			float op = tex1D(gTexSelectiveOpacity, (float)(SegmentColor.w) - 1.0f);
-
-			//printf("SEGMENT CONDITION - %f AT %f\n", op, (float)SegmentColor.w);
-
+			
 			return op;
 		}
 		else {

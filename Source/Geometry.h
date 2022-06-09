@@ -18,6 +18,7 @@
 #include <algorithm>
 #include <math.h>
 #include <cstdio>
+#include <iostream>
 
 class CColorRgbHdr;
 class CColorRgbLdr;
@@ -1831,6 +1832,22 @@ class EXPOSURE_RENDER_DLL CSelectiveOpacity
 {
 public:
 	float* OpacityBuffer;
+
+	HO CSelectiveOpacity(void) {
+		OpacityBuffer = new float[80];
+
+		for (int i=0; i<80; i++) {
+			OpacityBuffer[i] = 0.0f;
+		}
+	}
+
+	HO void printACK(void) {
+		std::cout<<"OPACITY BUFFER\n";
+		for (int i=0; i<80; i++) {
+			std::cout<<OpacityBuffer[i]<<"\t";
+		}
+		std::cout<<"\n";
+	}
 };
 
 // ToDo: Add description

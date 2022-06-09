@@ -2,6 +2,7 @@
 //#include <sstream>
 #include <QVTKOpenGLNativeWidget.h>
 #include "Core.cuh"
+#include "SelectiveOpacity.h"
 
 #pragma once
 
@@ -13,7 +14,6 @@ public:
     QSelectiveOpacityWidget(QWidget* pParent = NULL);
     virtual ~QSelectiveOpacityWidget(void);
 	void ResetTex();
-	float* GetOpacityBuffer();
 
 public slots:
 	void OnRenderBegin(void);
@@ -45,7 +45,6 @@ private:
 	int					MajorClassSize;
 	int					MinorClassSize;
 	int					SubClassSize;
-	float*				OpacityBuffer;
+	float*				Buffer;
+	int 				max;
 };
-
-extern QSelectiveOpacityWidget gSelectiveOpacityWidget;

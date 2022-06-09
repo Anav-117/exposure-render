@@ -241,8 +241,8 @@ void QRenderThread::run()
 	
 	Log("Device memory: " + QString::number(GetUsedCudaMemory() / MB, 'f', 2) + "/" + QString::number(GetTotalCudaMemory() / MB, 'f', 2) + " MB", "memory");
 
+	QObject::connect(&gSelectiveOpacity, SIGNAL(Changed()), this, SLOT(OnUpdateSelectiveOpacity()));
 	QObject::connect(&gTransferFunction, SIGNAL(Changed()), this, SLOT(OnUpdateTransferFunction()));
-	QObject::connect(&gSelectiveOpacityWidget, SIGNAL(clicked()), this, SLOT(onUpdateSelectiveOPacity()));
 	QObject::connect(&gCamera, SIGNAL(Changed()), this, SLOT(OnUpdateCamera()));
 	QObject::connect(&gLighting, SIGNAL(Changed()), this, SLOT(OnUpdateLighting()));
 	QObject::connect(&gLighting.Background(), SIGNAL(Changed()), this, SLOT(OnUpdateLighting()));
@@ -924,14 +924,21 @@ bool QRenderThread::LoadRGBA(QString& FileName)
 	return true;
 }
 
+void QRenderThread::OnUpdateSelectiveOpacity(void) {
+	QMutexLocker Locker(&gSceneMutex);
+
+	QSelectiveOpacity SelectiveOpacity;
+	SelectiveOpacity.SetOpacityBuffer(gSelectiveOpacity.GetOpacityBuffer());
+	gScene.m_SelectiveOpacity.OpacityBuffer = SelectiveOpacity.GetOpacityBuffer();
+
+	gScene.m_DirtyFlags.SetFlag(TransferFunctionDirty);
+}
+
 void QRenderThread::OnUpdateTransferFunction(void)
 {
 	QMutexLocker Locker(&gSceneMutex);
 
 	QTransferFunction TransferFunction = gTransferFunction;
-
-	//QSelectiveOpacityWidget gSelectiveOpacity = gSelectiveOpacityWidget;
-	//gScene.m_SelectiveOpacity.OpacityBuffer = gSelectiveOpacityWidget.GetOpacityBuffer();
 
 	gScene.m_TransferFunctions.m_Opacity.m_NoNodes		= TransferFunction.GetNodes().size();
 	gScene.m_TransferFunctions.m_Diffuse.m_NoNodes		= TransferFunction.GetNodes().size();

@@ -67,6 +67,7 @@ HOD CScene& CScene::operator=(const CScene& Other)
 	m_GradMagMean				= Other.m_GradMagMean;
 	m_RGBA						= Other.m_RGBA;
 	m_SegmentAvailable			= Other.m_SegmentAvailable;
+	m_SelectiveOpacity			= Other.m_SelectiveOpacity;
 
 	return *this;
 }
