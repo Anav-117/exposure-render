@@ -11,6 +11,8 @@ public:
     void SetOpacityBuffer(float *Buffer);
     QSelectiveOpacity& operator = (const QSelectiveOpacity& Other);
     float* GetOpacityBuffer();
+    void SetSize(int);
+    int GetSize();
     virtual ~QSelectiveOpacity(void);
 
 signals:
@@ -18,6 +20,7 @@ signals:
 	
 private:
     float*  OpacityBuffer;
+    int     Size;
 };
 
 // Transfer function singleton

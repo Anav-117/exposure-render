@@ -36,6 +36,7 @@ QSelectiveOpacityWidget::QSelectiveOpacityWidget(QWidget* pParent) :
     vector<string> temp2;
 
     File.open("./OutlinedStructure.csv", ios::in);
+    string rawline;
     string line;
 
     int CurrentMajorClass = 1;
@@ -45,10 +46,14 @@ QSelectiveOpacityWidget::QSelectiveOpacityWidget(QWidget* pParent) :
     int NewMinorClass = 0;
     SubClassSize = 0;
 
-    while(getline(File, line)) {
+    while(getline(File, rawline)) {
         //getline(File, line);
         
         //stringstream s(line);
+        size_t last = rawline.find_last_of(",");
+        line = rawline.substr(0, last);
+        string segmentNum = rawline.substr(last+1, rawline.length());
+        Segments.push_back(stoi(segmentNum));
 
         size_t firstindex = line.find_first_of(",");
         string w = line.substr(0, firstindex);
@@ -99,31 +104,7 @@ QSelectiveOpacityWidget::QSelectiveOpacityWidget(QWidget* pParent) :
     SubClassVector.push_back(temp2);
     temp2.clear();
     MinorClassVector.push_back(temp);
-    temp.clear();
-
-    /*TODO
-    
-        Create a parallel 2D array with all the segment values for each label 
-        (major, minor and sub included), Opacity values, and the type of the label (major, minor or sub).
-        This array will be sampled to set the opacity. Values can be retrieved 
-        using the tree defined below.
-        Index for any organ would be defined as TreeIndexof(Major) + TreeIndexof(Minor) + TreeIndexof(Sub).
-        Since the array division would be irregular, the third field will help in properly indexing the array.
-        Array will be stored as - 
-        Major 1
-        Minor 1.1
-        Sub   1.1.1
-        Sub   1.1.2
-        .
-        .
-        Sub   1.1.m
-        Minor 1.2
-        .
-        .
-        Minor 1.n
-
-    */
-    
+    temp.clear();    
 
     QObject::connect(&m_Tree, SIGNAL(itemClicked(QTreeWidgetItem*, int)), this, SLOT(OnSelection(QTreeWidgetItem*, int)));
     
@@ -135,19 +116,19 @@ QSelectiveOpacityWidget::QSelectiveOpacityWidget(QWidget* pParent) :
     int MinorClassIndex=0;
     int SubClassIndex=0;
     for (int i=0; i<MajorClassVector.size(); i++) {
-        LookUp.push_back({0, -1, 1});
+        //LookUp.push_back({0, -1, 1});
         MajorClass[i].setText(0, tr(((string)MajorClassVector[i]).c_str()));
         for (int j=0; j<MinorClassVector[i].size(); j++) {
             MinorClass[j+MinorClassIndex].setText(0, tr(((string)MinorClassVector[i][j]).c_str()));
             if (MinorClassVector[i][j].length() > 0) {
-                LookUp.push_back({1, -1, 1});
+                //LookUp.push_back({1, -1, 1});
                 for (int k=0; k<SubClassVector[j+MinorClassIndex].size(); k++) {
                     SubClass[k+SubClassIndex].setText(0, tr(((string)SubClassVector[j+MinorClassIndex][k]).c_str()));
                     //std::cout<<(string)SubClassVector[j+MinorClassIndex][k];
                     if (SubClassVector[j+MinorClassIndex][k].length() > 0) {
                         MinorClass[j+MinorClassIndex].addChild((SubClass + k + SubClassIndex));
-                        LookUp.push_back({2, SubTest[k+SubClassIndex], 1});
-                        OpacityArray.push_back({SubTest[k+SubClassIndex], 1});
+                        //LookUp.push_back({2, Segments[k+SubClassIndex], 1});
+                        OpacityArray.push_back({Segments[k+SubClassIndex], 1});
                     }
                 }
                 SubClassIndex+=SubClassVector[j+MinorClassIndex].size();
@@ -298,6 +279,32 @@ void QSelectiveOpacityWidget::OnButtonClick() {
         //std::cout<<"CHANGED "<<OpacityArray[Index][1]<<"\n";
         ResetTex();
     }
+    if (MinorChanged) {
+        int NumChildren = 0;
+        for (int i=0; i<Index; i++) {
+            NumChildren += MinorClass[i].childCount();
+        }
+        for(int i=NumChildren; i<(NumChildren+MinorClass[Index].childCount()); i++) {
+            OpacityArray[i][1] = (int)m_OpacitySpinnerWidget.value();
+        }
+        ResetTex();
+    }
+    if (MajorChanged) {
+        int NumChildren = 0;
+        for (int i=0; i<Index; i++) {
+            NumChildren += MajorClass[i].childCount();
+        }
+        for(int i=NumChildren; i<(NumChildren+MajorClass[Index].childCount()); i++) {
+            int NumGChildren = 0;
+            for (int j=0; j<i; j++) {
+                NumGChildren += MinorClass[j].childCount();
+            }
+            for(int j=NumGChildren; j<(NumGChildren+MinorClass[i].childCount()); j++) {
+                OpacityArray[j][1] = (int)m_OpacitySpinnerWidget.value();
+            }
+        }
+        ResetTex();
+    }
 }
 
 void QSelectiveOpacityWidget::OnSetOpacity(double Opacity) {
@@ -313,6 +320,7 @@ void QSelectiveOpacityWidget::ResetTex() {
         Buffer[OpacityArray[i][0]-1] = OpacityArray[i][1];
     }
 
+    gSelectiveOpacity.SetSize(max);
     gSelectiveOpacity.SetOpacityBuffer(Buffer);
 
     // for (int i = 0; i < max; i++) {

@@ -22,3 +22,11 @@ void QSelectiveOpacity::SetOpacityBuffer(float* Buffer) {
 float* QSelectiveOpacity::GetOpacityBuffer() {
     return OpacityBuffer;
 }
+
+void QSelectiveOpacity::SetSize(int mSize) {
+    Size = mSize;
+}
+
+int QSelectiveOpacity::GetSize() {
+    return Size;
+}

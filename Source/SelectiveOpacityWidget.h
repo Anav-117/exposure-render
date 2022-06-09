@@ -47,4 +47,5 @@ private:
 	int					SubClassSize;
 	float*				Buffer;
 	int 				max;
+	vector<int>			Segments;
 };

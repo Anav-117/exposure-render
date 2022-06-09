@@ -1832,18 +1832,29 @@ class EXPOSURE_RENDER_DLL CSelectiveOpacity
 {
 public:
 	float* OpacityBuffer;
+	int Size;
 
 	HO CSelectiveOpacity(void) {
-		OpacityBuffer = new float[80];
+		Size = 1;
+		OpacityBuffer = new float[Size];
 
-		for (int i=0; i<80; i++) {
+		for (int i=0; i<Size; i++) {
+			OpacityBuffer[i] = 0.0f;
+		}
+	}
+
+	HO void SetSize(int mSize) {
+		Size = mSize;
+		OpacityBuffer = new float[Size];
+
+		for (int i=0; i<Size; i++) {
 			OpacityBuffer[i] = 0.0f;
 		}
 	}
 
 	HO void printACK(void) {
 		std::cout<<"OPACITY BUFFER\n";
-		for (int i=0; i<80; i++) {
+		for (int i=0; i<Size; i++) {
 			std::cout<<OpacityBuffer[i]<<"\t";
 		}
 		std::cout<<"\n";

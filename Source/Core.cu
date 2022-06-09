@@ -274,6 +274,8 @@ void BindTextureSelectiveOpacity(float* Buffer, int BufferSize) {
 
 	const int WIDTH = BufferSize;
 
+	//printf("%d\n", BufferSize);
+
 	float* hInput = (float*)malloc(sizeof(float) * WIDTH);
 	float*hOutput = (float*)malloc(sizeof(float) * WIDTH);
 
@@ -298,12 +300,11 @@ void BindTextureSelectiveOpacity(float* Buffer, int BufferSize) {
 
 	cudaChannelFormatDesc ChannelDesc = cudaCreateChannelDesc<float>();
 
-	if (gpSelectiveOpacityArray == NULL)
-		HandleCudaError(cudaMallocArray(&gpSelectiveOpacityArray, &ChannelDesc, WIDTH, 1));
+	HandleCudaError(cudaMallocArray(&gpSelectiveOpacityArray, &ChannelDesc, WIDTH, 1));
 
 	HandleCudaError(cudaMemcpyToArray(gpSelectiveOpacityArray, 0, 0, dInput, sizeof(float) * WIDTH, cudaMemcpyDeviceToDevice));
 	HandleCudaError(cudaBindTextureToArray(gTexSelectiveOpacity, gpSelectiveOpacityArray, ChannelDesc));
-
+	
 	//copyKernel<<<1,1>>>(dOutput, WIDTH);
 
 	//HandleCudaError(cudaMemcpy(hOutput, dOutput, sizeof(float)*WIDTH, cudaMemcpyDeviceToHost));
@@ -316,8 +317,6 @@ void BindTextureSelectiveOpacity(float* Buffer, int BufferSize) {
 	//for (int i = 0; i < WIDTH; i++) {
 	//	printf("%f %d\t",hOutput[i], i);
 	//}
-
-	//printf("BUFFER SET FOR SO\n");
 }
 
 void BindTransferFunctionOpacity(CTransferFunction& TransferFunctionOpacity)

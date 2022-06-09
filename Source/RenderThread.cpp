@@ -319,7 +319,7 @@ void QRenderThread::run()
 
 			BindConstants(&SceneCopy);
 
-			BindTextureSelectiveOpacity(SceneCopy.m_SelectiveOpacity.OpacityBuffer, 80);
+			BindTextureSelectiveOpacity(SceneCopy.m_SelectiveOpacity.OpacityBuffer, SceneCopy.m_SelectiveOpacity.Size);
 			BindTransferFunctionOpacity(SceneCopy.m_TransferFunctions.m_Opacity);
 			BindTransferFunctionDiffuse(SceneCopy.m_TransferFunctions.m_Diffuse);
 			BindTransferFunctionSpecular(SceneCopy.m_TransferFunctions.m_Specular);
@@ -929,7 +929,10 @@ void QRenderThread::OnUpdateSelectiveOpacity(void) {
 
 	QSelectiveOpacity SelectiveOpacity;
 	SelectiveOpacity.SetOpacityBuffer(gSelectiveOpacity.GetOpacityBuffer());
+	gScene.m_SelectiveOpacity.SetSize(gSelectiveOpacity.GetSize());
 	gScene.m_SelectiveOpacity.OpacityBuffer = SelectiveOpacity.GetOpacityBuffer();
+
+	//gScene.m_SelectiveOpacity.printACK();
 
 	gScene.m_DirtyFlags.SetFlag(TransferFunctionDirty);
 }

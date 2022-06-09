@@ -71,13 +71,14 @@ DEV float GetOpacity(const float& NormalizedIntensity, float3 P)
 		uchar4 BG = tex3D(gTexOpacityRGB, (P.x*1.5f)*Rx, (P.y*1.5f)*Ry, (P.z*1.5f)*Rz); 
 		if (SegmentAvailable) {
 			uchar4 SegmentColor = tex3D(gTexOpacityRGBA, (P.x*1.5f)*Rx, (P.y*1.5f)*Ry, (P.z*1.5f)*Rz);
-			if ((float)(BG.x) == 2.0f) {
-				return 0.0f;
-			}
+			//if ((float)(BG.x) == 2.0f) {
+				//return 0.0f;
+			//}
+			float bg = abs(2.0f - (float)BG.x);
 
 			float op = tex1D(gTexSelectiveOpacity, (float)(SegmentColor.w) - 1.0f);
 			
-			return op;
+			return (op*bg);
 		}
 		else {
 			DensityScale = gDensityScale;
