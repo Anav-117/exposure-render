@@ -1827,6 +1827,12 @@ HOD inline CColorXyz Lerp(float T, const CColorXyz& C1, const CColorXyz& C2)
 	return CColorXyz(OneMinusT * C1.c[0] + T * C2[0], OneMinusT * C1.c[0] + T * C2[0], OneMinusT * C1.c[0] + T * C2[0]);
 }
 
+class EXPOSURE_RENDER_DLL CSelectiveOpacity 
+{
+public:
+	float* OpacityBuffer;
+};
+
 // ToDo: Add description
 class EXPOSURE_RENDER_DLL CTransferFunction
 {

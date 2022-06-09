@@ -6,16 +6,25 @@
 #include <iostream>
 #include <vtkGenericOpenGLRenderWindow.h>
 #include <vtkRenderer.h>
+#include <vtkNamedColors.h>
+#include <vtkActor.h>
+#include <vtkSphereSource.h>
+#include <vtkPolyDataMapper.h>
+#include <vtkProperty.h>
+#include <algorithm>
 
 #define NUM_SEGMENTS 3
+
+vector<int> SubTest{32, 48, 56, 64, 80};
 
 QSelectiveOpacityWidget::QSelectiveOpacityWidget(QWidget* pParent) :
 	QGroupBox(pParent),
 	m_MainLayout(),
     m_OpacitySlider(),
-    m_OpacitySpinner(),
+    m_OpacitySpinnerWidget(),
     m_RenderWindow(),
-    m_Tree()
+    m_Tree(), 
+    m_Button()
 {
     m_MainLayout.setAlignment(Qt::AlignBottom);
 	setLayout(&m_MainLayout);
@@ -26,15 +35,15 @@ QSelectiveOpacityWidget::QSelectiveOpacityWidget(QWidget* pParent) :
     vector<string> temp;
     vector<string> temp2;
 
-    File.open("./OutlinedStructure.csv", ios::in);
+    File.open("../Source/OutlinedStructure.csv", ios::in);
     string line;
 
     int CurrentMajorClass = 1;
     int NewMajorClass = 1;
-    int MinorClassSize = 0;
+    MinorClassSize = 0;
     int CurrentMinorClass = 1;
     int NewMinorClass = 0;
-    int SubClassSize = 0;
+    SubClassSize = 0;
 
     while(getline(File, line)) {
         //getline(File, line);
@@ -86,7 +95,9 @@ QSelectiveOpacityWidget::QSelectiveOpacityWidget(QWidget* pParent) :
             SubClassSize++;
         }
     }
-
+    
+    SubClassVector.push_back(temp2);
+    temp2.clear();
     MinorClassVector.push_back(temp);
     temp.clear();
 
@@ -112,64 +123,203 @@ QSelectiveOpacityWidget::QSelectiveOpacityWidget(QWidget* pParent) :
         Minor 1.n
 
     */
+    
 
-    QTreeWidgetItem *MajorClass = new QTreeWidgetItem[MajorClassVector.size()];
-    QTreeWidgetItem *MinorClass = new QTreeWidgetItem[MinorClassSize];
-    QTreeWidgetItem *SubClass = new QTreeWidgetItem[SubClassSize];
+    QObject::connect(&m_Tree, SIGNAL(itemClicked(QTreeWidgetItem*, int)), this, SLOT(OnSelection(QTreeWidgetItem*, int)));
+    
+    MajorClassSize = MajorClassVector.size();
+    MajorClass = new QTreeWidgetItem[MajorClassSize];
+    MinorClass = new QTreeWidgetItem[MinorClassSize];
+    SubClass = new QTreeWidgetItem[SubClassSize];
     int testIndex=0;
     int MinorClassIndex=0;
     int SubClassIndex=0;
     for (int i=0; i<MajorClassVector.size(); i++) {
+        LookUp.push_back({0, -1, 1});
         MajorClass[i].setText(0, tr(((string)MajorClassVector[i]).c_str()));
         for (int j=0; j<MinorClassVector[i].size(); j++) {
             MinorClass[j+MinorClassIndex].setText(0, tr(((string)MinorClassVector[i][j]).c_str()));
-            for (int k=0; k<SubClassVector[j+MinorClassIndex].size(); k++) {
-                SubClass[k+SubClassIndex].setText(0, tr(((string)SubClassVector[j+MinorClassIndex][k]).c_str()));
-                //std::cout<<(string)SubClassVector[j+MinorClassIndex][k];
-                MinorClass[j+MinorClassIndex].addChild((SubClass + k + SubClassIndex));
+            if (MinorClassVector[i][j].length() > 0) {
+                LookUp.push_back({1, -1, 1});
+                for (int k=0; k<SubClassVector[j+MinorClassIndex].size(); k++) {
+                    SubClass[k+SubClassIndex].setText(0, tr(((string)SubClassVector[j+MinorClassIndex][k]).c_str()));
+                    //std::cout<<(string)SubClassVector[j+MinorClassIndex][k];
+                    if (SubClassVector[j+MinorClassIndex][k].length() > 0) {
+                        MinorClass[j+MinorClassIndex].addChild((SubClass + k + SubClassIndex));
+                        LookUp.push_back({2, SubTest[k+SubClassIndex], 1});
+                        OpacityArray.push_back({SubTest[k+SubClassIndex], 1});
+                    }
+                }
+                SubClassIndex+=SubClassVector[j+MinorClassIndex].size();
+                if (MinorClassVector[i][j].length() > 0) {
+                    MajorClass[i].addChild((MinorClass + j + MinorClassIndex));
+                }
             }
-            SubClassIndex+=SubClassVector[j+MinorClassIndex].size();
-            MajorClass[i].addChild((MinorClass + j + MinorClassIndex));
         }
         MinorClassIndex+=MinorClassVector[i].size();
         m_Tree.addTopLevelItem((MajorClass+i));
     }
-
-    //m_Tree.setColumnCount(2);
-    //MajorClass->setText(0, tr("Major Class"));
-    //QTreeWidgetItem *SubClass = new QTreeWidgetItem(MajorClass);
-    //SubClass->setText(0, tr("SubClass1"));
-    //SubClass->setText(1, tr("SubClass2"));
-    //MajorClass->addChild(SubClass);
 
     m_MainLayout.addWidget(&m_Tree, 0, 0);
 
     m_MainLayout.addWidget(new QLabel("Opacity"), 1, 0);
 
 	m_OpacitySlider.setOrientation(Qt::Horizontal);
-	m_OpacitySlider.setRange(0.001, 100.0);
-	m_OpacitySlider.setValue(1.0);
+	m_OpacitySlider.setRange(0.0, 1.0);
+	m_OpacitySlider.setValue(0.01);
 	m_MainLayout.addWidget(&m_OpacitySlider, 2, 0);
 
-	m_OpacitySpinner.setRange(0.001, 100.0);
-	m_OpacitySpinner.setDecimals(3);
-	m_MainLayout.addWidget(&m_OpacitySpinner, 3, 0);
+	m_OpacitySpinnerWidget.setRange(0.0, 1.0);
+	m_OpacitySpinnerWidget.setDecimals(3);
+	m_MainLayout.addWidget(&m_OpacitySpinnerWidget, 3, 0);
 
-    vtkSmartPointer<vtkGenericOpenGLRenderWindow> renderWindow = vtkSmartPointer<vtkGenericOpenGLRenderWindow>::New();
+    QObject::connect(&m_OpacitySlider, SIGNAL(valueChanged(double)), &m_OpacitySpinnerWidget, SLOT(setValue(double)));
+	QObject::connect(&m_OpacitySpinnerWidget, SIGNAL(valueChanged(double)), &m_OpacitySlider, SLOT(setValue(double)));
+	QObject::connect(&m_OpacitySlider, SIGNAL(valueChanged(double)), this, SLOT(OnSetOpacity(double)));
 
-    vtkSmartPointer<vtkRenderer> renderer = vtkSmartPointer<vtkRenderer>::New();
-    renderWindow->AddRenderer(renderer);
-    m_RenderWindow.SetRenderWindow(renderWindow); 
+    m_Button.setText(QString::fromStdString("Refresh"));
+    m_MainLayout.addWidget(&m_Button, 4, 0);
 
-    //m_RenderWindow.show();
-    //renderWindow->Render ();
+    QObject::connect(&m_Button, SIGNAL(clicked()), this, SLOT(OnButtonClick()));    
 
-    m_MainLayout.addWidget(&m_RenderWindow, 4, 0);
+    //ResetTex();
+
+    // vtkSmartPointer<vtkGenericOpenGLRenderWindow> renderWindow = vtkSmartPointer<vtkGenericOpenGLRenderWindow>::New();
+
+    // vtkSmartPointer<vtkNamedColors> colors = vtkNamedColors::New();
+
+    // vtkSmartPointer<vtkSphereSource> sphereSource = vtkSphereSource::New();
+
+    // vtkSmartPointer<vtkPolyDataMapper> sphereMapper = vtkPolyDataMapper::New();
+    // sphereMapper->SetInputConnection(sphereSource->GetOutputPort());
+
+    // vtkSmartPointer<vtkActor> sphereActor = vtkActor::New();
+    // sphereActor->SetMapper(sphereMapper);
+    // //sphereActor->GetProperty()->SetColor(colors->GetColor4d("Tomato").GetData());
+
+    // vtkSmartPointer<vtkRenderer> renderer = vtkRenderer::New();
+    // renderer->AddActor(sphereActor);
+    // renderer->SetBackground(colors->GetColor3d("SteelBlue").GetData());
+
+    // //m_RenderWindow.SetRenderWindow(renderWindow);
+
+
+    // //vtkSmartPointer<vtkRenderer> renderer = vtkSmartPointer<vtkRenderer>::New();
+    // //renderWindow->AddRenderer(renderer);
+    // m_RenderWindow.SetRenderWindow(renderWindow); 
+    // m_RenderWindow.resize(600, 600);
+
+    // m_RenderWindow.GetRenderWindow()->AddRenderer(renderer);
+    // //m_RenderWindow.show();
+
+    // //m_RenderWindow.show();
+    // //renderWindow->Render ();
+
+    // m_MainLayout.addWidget(&m_RenderWindow, 4, 0);
 }
 
 QSelectiveOpacityWidget::~QSelectiveOpacityWidget() {}
 
+bool operator==(QTreeWidgetItem A, QTreeWidgetItem* B) {
+    return A.text(0) == B->text(0);
+}
+
 void QSelectiveOpacityWidget::OnRenderBegin(void)
 {
+    //m_RenderWindow.show();
+    //ResetTex();
+}
 
+void QSelectiveOpacityWidget::OnMajorChanged(int index) {
+    MajorChanged = true;
+    SubChanged = MinorChanged = false;
+    Index = index;
+}
+
+void QSelectiveOpacityWidget::OnMinorChanged(int index) {
+    MinorChanged = true;
+    MajorChanged = SubChanged = false;
+    Index = index;
+}
+
+void QSelectiveOpacityWidget::OnSubChanged(int index) {
+    SubChanged = true;
+    MajorChanged = MinorChanged = false;
+    Index = index;
+    m_OpacitySpinnerWidget.setValue(OpacityArray[Index][1]);
+    std::cout<<"VALUE "<<OpacityArray[Index][1]<<"\n";
+}
+
+void QSelectiveOpacityWidget::OnSelection(QTreeWidgetItem* Item, int col) {
+    bool found = false;
+
+    for (int i=0; i<MajorClassSize; i++) {
+        if (MajorClass[i] == Item) {
+            OnMajorChanged(i);
+            found = true;
+            break;
+        }
+    }
+
+    if (!found) {
+        for (int i=0; i<MinorClassSize; i++) {
+            if (MinorClass[i] == Item) {
+                OnMinorChanged(i);
+                found = true;
+                break;
+            }
+        }
+    }
+
+    if (!found) {
+        for (int i=0; i<SubClassSize; i++) {
+            if (SubClass[i] == Item) {
+                OnSubChanged(i);
+                break;
+            }
+        }
+    }
+}
+
+void QSelectiveOpacityWidget::OnButtonClick() {
+    if (SubChanged) {
+        OpacityArray[Index][1] = (int)m_OpacitySpinnerWidget.value();
+        std::cout<<"CHANGED "<<OpacityArray[Index][1]<<"\n";
+        //ResetTex();
+    }
+}
+
+void QSelectiveOpacityWidget::OnSetOpacity(double Opacity) {
+    
+}
+
+void QSelectiveOpacityWidget::ResetTex() {
+    int max = OpacityArray[0][1];
+    for(int i=1; i<OpacityArray.size(); i++) {
+        if (OpacityArray[i][0] > max) {
+            max = OpacityArray[i][0];
+        }
+    }
+    free(OpacityBuffer);
+
+    OpacityBuffer = new float[max];
+
+    for (int i = 0; i < max; i++) {
+        OpacityBuffer[i] = 0.0f;
+    }
+
+    for (int i = 0; i<OpacityArray.size(); i++) {
+        OpacityBuffer[OpacityArray[i][0]-1] = OpacityArray[i][1];
+    }
+
+    // for (int i = 0; i < max; i++) {
+    //     if (OpacityBuffer[i] > 0)
+    //         std::cout<<OpacityBuffer[i]<<"\n";
+    // }
+
+    //BindTextureSelectiveOpacity(OpacityBuffer, max);
+}
+
+float* QSelectiveOpacityWidget::GetOpacityBuffer() {
+    return OpacityBuffer;
 }

@@ -16,6 +16,7 @@
 #include <cuda_runtime.h>
 
 DEV float Rx, Ry, Rz;
+DEV float Rox, Roy, Roz;
 DEV float RSx, RSy, RSz;
 DEV float DensityScale;
 DEV float isRGBA, SegmentAvailable;
@@ -46,6 +47,9 @@ DEV void SetResolution(float gRx, float gRy, float gRz, float gRSx, float gRSy, 
 	RSx = gRSx;
 	RSy = gRSy;
 	RSz = gRSz;
+	Rox = 1.0f;
+	Roy = 1.0f;
+	Roz = 1.0f;
 }
 
 DEV void SetSegmentAvailable(bool gSegmentAvailable) {
@@ -64,24 +68,18 @@ DEV float GetOpacity(const float& NormalizedIntensity, float3 P)
 {
 	DensityScale = gDensityScale;
 	if (isRGBA) {
-		uchar4 Opacity = tex3D(gTexOpacityRGBA, P.x*Rx*2.0f, P.y*Ry, P.z*Rz*2.0f); 
-		//printf("Vectors - %f : %f : %f\n", P.x, P.y, P.z);
-		//printf("%f\n", SegmentAvailable);
+		uchar4 BG = tex3D(gTexOpacityRGB, (P.x*1.5f)*Rx, (P.y*1.5f)*Ry, (P.z*1.5f)*Rz); 
 		if (SegmentAvailable) {
-			uchar4 SegmentColor = tex3D(gTexOpacityRGB, P.y*RSy, P.x*RSx*2.0f, P.z*RSz*2.0f);
-			//printf("COLOR - %f : %f : %f\n", (float)SegmentColor.x, (float)SegmentColor.y, (float)SegmentColor.z);
-			if ((float)SegmentColor.x == 252.0f && (float)SegmentColor.y == 140	&& (float)SegmentColor.z == 161) {
-				//DensityScale = 100.0f;
-				return 1.0f;//((float)Opacity.w/255);
-			}
-			//else if ((float)SegmentColor.x == 2.0f){
-				//DensityScale = 5.0f;
-			//	return 0.0005f;
-			//}
-			else {
-				//DensityScale = 5.0f;
+			uchar4 SegmentColor = tex3D(gTexOpacityRGBA, (P.x*1.5f)*Rx, (P.y*1.5f)*Ry, (P.z*1.5f)*Rz);
+			if ((float)(BG.x) == 2.0f) {
 				return 0.0f;
 			}
+
+			float op = tex1D(gTexSelectiveOpacity, (float)(SegmentColor.w) - 1.0f);
+
+			//printf("SEGMENT CONDITION - %f AT %f\n", op, (float)SegmentColor.w);
+
+			return op;
 		}
 		else {
 			DensityScale = gDensityScale;
@@ -94,10 +92,10 @@ DEV float GetOpacity(const float& NormalizedIntensity, float3 P)
 	}
 }
 
-DEV CColorRgbHdr GetDiffuse(const float& NormalizedIntensity, float3 P)
+DEV CColorRgbHdr GetDiffuse(const float& NormalizedIntensity, Vec3f P)
 {
 	if (isRGBA) {
-		uchar4 Diffuse = tex3D(gTexDiffuseRGBA, P.x*Rx*2.0f, P.y*Ry, P.z*Rz*2.0f);
+		uchar4 Diffuse = tex3D(gTexDiffuseRGBA, (P.x*1.5f)*Rx, (P.y*1.5f)*Ry, (P.z*1.5f)*Rz);
 		//printf("COLOR - %f : %f : %f\n", (float)Diffuse.x, (float)Diffuse.y, (float)Diffuse.z);
 		return CColorRgbHdr((float)Diffuse.x/255.0f, (float)Diffuse.y/255.0f, (float)Diffuse.z/255.0f);
 		//return CColorRgbHdr(0, 255, 0);

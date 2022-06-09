@@ -71,6 +71,7 @@ public:
 	Vec3f				m_Scale;
 	CBoundingBox		m_BoundingBox;
 	CTransferFunctions	m_TransferFunctions;
+	CSelectiveOpacity	m_SelectiveOpacity;
 	CRange				m_IntensityRange;
 	CRange				m_GradientMagnitudeRange;
 	float				m_DensityScale;

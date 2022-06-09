@@ -242,6 +242,7 @@ void QRenderThread::run()
 	Log("Device memory: " + QString::number(GetUsedCudaMemory() / MB, 'f', 2) + "/" + QString::number(GetTotalCudaMemory() / MB, 'f', 2) + " MB", "memory");
 
 	QObject::connect(&gTransferFunction, SIGNAL(Changed()), this, SLOT(OnUpdateTransferFunction()));
+	QObject::connect(&gSelectiveOpacityWidget, SIGNAL(clicked()), this, SLOT(onUpdateSelectiveOPacity()));
 	QObject::connect(&gCamera, SIGNAL(Changed()), this, SLOT(OnUpdateCamera()));
 	QObject::connect(&gLighting, SIGNAL(Changed()), this, SLOT(OnUpdateLighting()));
 	QObject::connect(&gLighting.Background(), SIGNAL(Changed()), this, SLOT(OnUpdateLighting()));
@@ -255,6 +256,7 @@ void QRenderThread::run()
 	CTiming FPS, RenderImage, BlurImage, PostProcessImage, DenoiseImage;
 
 	ResetRenderCanvasView();
+
 
 	// const int OpacityBufferSize = gSelectiveOpacity.GetNumSegments() * sizeof(float);
 	// m_pOpacityBuffer = (float*)malloc(OpacityBufferSize);
@@ -317,12 +319,8 @@ void QRenderThread::run()
 
 			BindConstants(&SceneCopy);
 
-			// if (SceneCopy.m_RGBA) {
-			// 	BindOpacityRGBA(m_pOpacityBuffer, gSelectiveOpacity.GetNumSegments());
-			// }
-			// else {
-				BindTransferFunctionOpacity(SceneCopy.m_TransferFunctions.m_Opacity);
-			//}
+			BindTextureSelectiveOpacity(SceneCopy.m_SelectiveOpacity.OpacityBuffer, 80);
+			BindTransferFunctionOpacity(SceneCopy.m_TransferFunctions.m_Opacity);
 			BindTransferFunctionDiffuse(SceneCopy.m_TransferFunctions.m_Diffuse);
 			BindTransferFunctionSpecular(SceneCopy.m_TransferFunctions.m_Specular);
 			BindTransferFunctionRoughness(SceneCopy.m_TransferFunctions.m_Roughness);
@@ -656,11 +654,13 @@ bool QRenderThread::LoadRGBA(QString& FileName)
 	//std::cout << PosTraceFile;
 	
 	string SegmentFile = rawname + "_Segments.mhd";
+	string SegmentFileBG = rawname + "_SegmentsBG.mhd";
 
 	vtkSmartPointer<vtkMetaImageReader> reader = vtkMetaImageReader::New();
+	vtkSmartPointer<vtkMetaImageReader> readerBG = vtkMetaImageReader::New();
 	//vtkSmartPointer<vtkNrrdReader> reader = vtkNrrdReader::New();
 
-	if (!reader->CanReadFile(QString::fromStdString(SegmentFile).toLatin1()))
+	if (!reader->CanReadFile(QString::fromStdString(SegmentFile).toLatin1()) || !readerBG->CanReadFile(QString::fromStdString(SegmentFileBG).toLatin1()) )
 	{
 		std::cout << "Cannot read Segment Volume\n";
 		gScene.m_SegmentAvailable = false;
@@ -669,11 +669,22 @@ bool QRenderThread::LoadRGBA(QString& FileName)
 		gScene.m_SegmentAvailable = true;
 	}
 
+	vtkSmartPointer<vtkImageExtractComponents> segmentChannel = vtkImageExtractComponents::New();
+
 	if (gScene.m_SegmentAvailable) {
 		reader->SetFileName(QString::fromStdString(SegmentFile).toLatin1());
-		reader->SetNumberOfScalarComponents(4);
+		reader->SetNumberOfScalarComponents(1);
 		reader->SetDataScalarTypeToUnsignedChar();
 		reader->Update();
+
+		readerBG->SetFileName(QString::fromStdString(SegmentFileBG).toLatin1());
+		readerBG->SetNumberOfScalarComponents(1);
+		readerBG->SetDataScalarTypeToUnsignedChar();
+		readerBG->Update();
+
+		segmentChannel->SetInputConnection(reader->GetOutputPort());
+		segmentChannel->SetComponents(0);
+		segmentChannel->Update();
 
 		if (reader->GetErrorCode() != vtkErrorCode::NoError)
 		{
@@ -704,7 +715,7 @@ bool QRenderThread::LoadRGBA(QString& FileName)
 	}
 
 	MetaImageReader->SetFileName(m_FileName.toLatin1());
-	MetaImageReader->SetNumberOfScalarComponents(4);
+	MetaImageReader->SetNumberOfScalarComponents(3);
 	MetaImageReader->SetDataScalarTypeToUnsignedChar();
 
 	MetaImageReader->Update();
@@ -729,8 +740,14 @@ bool QRenderThread::LoadRGBA(QString& FileName)
 	}
 
 	std::cout <<"Attempting to set volume\n";
+	vtkSmartPointer<vtkImageAppendComponents> appendRGBA = vtkImageAppendComponents::New();
+	appendRGBA->SetInputConnection(MetaImageReader->GetOutputPort());
+	//append->AddInputConnection(IntensityVolume->GetOutputPort());
+	appendRGBA->AddInputConnection(segmentChannel->GetOutputPort());
+	appendRGBA->Update();
+
 	// Volume resolution
-	int* pVolumeResolution = MetaImageReader->GetOutput()->GetExtent();
+	int* pVolumeResolution = appendRGBA->GetOutput()->GetExtent();
 	gScene.m_Resolution.SetResXYZ(Vec3i(pVolumeResolution[1] + 1, pVolumeResolution[3] + 1, pVolumeResolution[5] + 1));
 	gCamera.SetResolution(Vec3f((float)gScene.m_Resolution.GetResX()*4.0f, (float)gScene.m_Resolution.GetResY(), (float)gScene.m_Resolution.GetResZ()*4.0f));
 	Log("Resolution: " + FormatSize(gScene.m_Resolution.GetResXYZ()) + "", "grid");
@@ -739,8 +756,9 @@ bool QRenderThread::LoadRGBA(QString& FileName)
 	std::cout<<"Resolution - "<<gScene.m_Resolution.GetResX()<<" : "<<gScene.m_Resolution.GetResY()<<" : "<<gScene.m_Resolution.GetResZ()<<"\n";
 
 	const int DensityBufferSize = gScene.m_Resolution.GetNoElements() * sizeof(uchar4);
+	std::cout<<"SIZE = "<<DensityBufferSize<<"\n";
  	m_pDensityBufferRGBA = (uchar4*)malloc(DensityBufferSize);
-	memcpy(m_pDensityBufferRGBA, MetaImageReader->GetOutput()->GetScalarPointer(), DensityBufferSize);
+	memcpy(m_pDensityBufferRGBA, appendRGBA->GetOutput()->GetScalarPointer(), DensityBufferSize);
 
 	std::cout<<"Volume Set\n";
 
@@ -751,7 +769,7 @@ bool QRenderThread::LoadRGBA(QString& FileName)
 
 	Log("Intensity range: [" + QString::number(gScene.m_IntensityRange.GetMin()) + ", " + QString::number(gScene.m_IntensityRange.GetMax()) + "]", "grid");
 	// Spacing
-	double* pSpacing = ImageCast->GetOutput()->GetSpacing();
+	double* pSpacing = MetaImageReader->GetOutput()->GetSpacing();
 
 	std::cout<<"1\n";
 
@@ -794,21 +812,21 @@ bool QRenderThread::LoadRGBA(QString& FileName)
 
 	if (gScene.m_SegmentAvailable) {	
 		vtkSmartPointer<vtkImageAppendComponents> append = vtkImageAppendComponents::New();
-		append->SetInputConnection(reader->GetOutputPort());
+		append->SetInputConnection(readerBG->GetOutputPort());
 		//append->AddInputConnection(IntensityVolume->GetOutputPort());
-		append->AddInputConnection(reader->GetOutputPort());
-		append->AddInputConnection(reader->GetOutputPort());
-		append->AddInputConnection(reader->GetOutputPort());
+		append->AddInputConnection(readerBG->GetOutputPort());
+		append->AddInputConnection(readerBG->GetOutputPort());
+		append->AddInputConnection(readerBG->GetOutputPort());
 		append->Update();
 
-		int* pVolumeResolutionSegment = reader->GetOutput()->GetExtent();
+		int* pVolumeResolutionSegment = append->GetOutput()->GetExtent();
 		gScene.m_ResolutionSegment.SetResXYZ(Vec3i(pVolumeResolutionSegment[1] + 1, pVolumeResolutionSegment[3] + 1, pVolumeResolutionSegment[5] + 1));
 
 		std::cout <<"\nAttempting to set segment volume\n";
 
-		const long DensityBufferSizeRGB = gScene.m_ResolutionSegment.GetNoElements() * sizeof(uchar4);
+		const int DensityBufferSizeRGB = gScene.m_ResolutionSegment.GetNoElements() * sizeof(uchar4);
 		m_pDensityBufferRGB = (uchar4*)malloc(DensityBufferSizeRGB);
-		memcpy(m_pDensityBufferRGB, reader->GetOutput()->GetScalarPointer(), DensityBufferSizeRGB);
+		memcpy(m_pDensityBufferRGB, append->GetOutput()->GetScalarPointer(), DensityBufferSizeRGB);
 
 		std::cout<<"Segment Volume Set\n";
 	}
@@ -911,6 +929,9 @@ void QRenderThread::OnUpdateTransferFunction(void)
 	QMutexLocker Locker(&gSceneMutex);
 
 	QTransferFunction TransferFunction = gTransferFunction;
+
+	//QSelectiveOpacityWidget gSelectiveOpacity = gSelectiveOpacityWidget;
+	//gScene.m_SelectiveOpacity.OpacityBuffer = gSelectiveOpacityWidget.GetOpacityBuffer();
 
 	gScene.m_TransferFunctions.m_Opacity.m_NoNodes		= TransferFunction.GetNodes().size();
 	gScene.m_TransferFunctions.m_Diffuse.m_NoNodes		= TransferFunction.GetNodes().size();

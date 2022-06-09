@@ -12,7 +12,7 @@ public:
     virtual ~QSelectiveOpacityDockWidget();
 
 private:
-	QSelectiveOpacityWidget		m_SelectiveOpacityWidget;
+	QSelectiveOpacityWidget      m_SelectiveOpacityWidget;
     //QMeshRenderWidget           m_MeshRenderWidget;
     //QGridLayout                 m_MainLayout;
 };

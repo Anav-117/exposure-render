@@ -36,10 +36,10 @@ CMainWindow::CMainWindow() :
 	m_VtkWidget(),
 	m_LogDockWidget(),
 	m_LightingDockWidget(),
-	m_SelectiveOpacityDockWidget(),
 	m_AppearanceDockWidget(),
 	m_StatisticsDockWidget(),
 	m_CameraDockWidget(),
+	m_SelectiveOpacityDockWidget(),
 	m_SettingsDockWidget()
 {
 	gpMainWindow = this;

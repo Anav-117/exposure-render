@@ -88,6 +88,7 @@ public slots:
 	void OnUpdateCamera(void);
 	void OnUpdateLighting(void);
 	void OnRenderPause(const bool& Pause);
+	void OnUpdateSelectiveOpacity(void);
 };
 
 // Render thread
