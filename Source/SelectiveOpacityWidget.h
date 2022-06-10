@@ -1,8 +1,6 @@
 #include <fstream>
-//#include <sstream>
-#include <QVTKOpenGLNativeWidget.h>
-#include "Core.cuh"
 #include "SelectiveOpacity.h"
+#include "MeshRenderingWidget.h"
 
 #pragma once
 
@@ -29,8 +27,8 @@ private:
 	QTreeWidget				m_Tree;
 	QDoubleSlider			m_OpacitySlider;
 	QDoubleSpinner			m_OpacitySpinnerWidget;
-	QVTKOpenGLNativeWidget	m_RenderWindow;
 	QPushButton				m_Button;
+	QMeshRenderingWidget	m_RenderWindow;
 
 	fstream				File;
 	bool				SubChanged = false;
@@ -38,7 +36,7 @@ private:
 	bool				MinorChanged = false;
 	int					Index;
 	vector<vector<int>> LookUp;
-    vector<vector<int>> OpacityArray;
+    vector<vector<float>> OpacityArray;
 	QTreeWidgetItem* 	MajorClass;
 	QTreeWidgetItem* 	MinorClass;
 	QTreeWidgetItem* 	SubClass;

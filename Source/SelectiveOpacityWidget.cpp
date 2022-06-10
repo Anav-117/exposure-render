@@ -4,18 +4,8 @@
 #include <vector>
 #include <algorithm>
 #include <iostream>
-#include <vtkGenericOpenGLRenderWindow.h>
-#include <vtkRenderer.h>
-#include <vtkNamedColors.h>
-#include <vtkActor.h>
-#include <vtkSphereSource.h>
-#include <vtkPolyDataMapper.h>
-#include <vtkProperty.h>
-#include <algorithm>
 
 #define NUM_SEGMENTS 3
-
-vector<int> SubTest{32, 48, 56, 64, 80};
 
 QSelectiveOpacityWidget::QSelectiveOpacityWidget(QWidget* pParent) :
 	QGroupBox(pParent),
@@ -26,7 +16,7 @@ QSelectiveOpacityWidget::QSelectiveOpacityWidget(QWidget* pParent) :
     m_Tree(), 
     m_Button()
 {
-    m_MainLayout.setAlignment(Qt::AlignBottom);
+    m_MainLayout.setAlignment(Qt::AlignTop);
 	setLayout(&m_MainLayout);
 
     vector<string> MajorClassVector;
@@ -141,63 +131,22 @@ QSelectiveOpacityWidget::QSelectiveOpacityWidget(QWidget* pParent) :
         m_Tree.addTopLevelItem((MajorClass+i));
     }
 
-    m_MainLayout.addWidget(&m_Tree, 0, 0);
-
-    m_MainLayout.addWidget(new QLabel("Opacity"), 1, 0);
+    QLabel* label = new QLabel("Opacity");
 
 	m_OpacitySlider.setOrientation(Qt::Horizontal);
 	m_OpacitySlider.setRange(0.0, 1.0);
 	m_OpacitySlider.setValue(0.01);
-	m_MainLayout.addWidget(&m_OpacitySlider, 2, 0);
 
 	m_OpacitySpinnerWidget.setRange(0.0, 1.0);
 	m_OpacitySpinnerWidget.setDecimals(3);
-	m_MainLayout.addWidget(&m_OpacitySpinnerWidget, 3, 0);
 
     QObject::connect(&m_OpacitySlider, SIGNAL(valueChanged(double)), &m_OpacitySpinnerWidget, SLOT(setValue(double)));
 	QObject::connect(&m_OpacitySpinnerWidget, SIGNAL(valueChanged(double)), &m_OpacitySlider, SLOT(setValue(double)));
 	QObject::connect(&m_OpacitySlider, SIGNAL(valueChanged(double)), this, SLOT(OnSetOpacity(double)));
 
     m_Button.setText(QString::fromStdString("Refresh"));
-    m_MainLayout.addWidget(&m_Button, 4, 0);
 
     QObject::connect(&m_Button, SIGNAL(clicked()), this, SLOT(OnButtonClick()));    
-
-    //ResetTex();
-
-    // vtkSmartPointer<vtkGenericOpenGLRenderWindow> renderWindow = vtkSmartPointer<vtkGenericOpenGLRenderWindow>::New();
-
-    // vtkSmartPointer<vtkNamedColors> colors = vtkNamedColors::New();
-
-    // vtkSmartPointer<vtkSphereSource> sphereSource = vtkSphereSource::New();
-
-    // vtkSmartPointer<vtkPolyDataMapper> sphereMapper = vtkPolyDataMapper::New();
-    // sphereMapper->SetInputConnection(sphereSource->GetOutputPort());
-
-    // vtkSmartPointer<vtkActor> sphereActor = vtkActor::New();
-    // sphereActor->SetMapper(sphereMapper);
-    // //sphereActor->GetProperty()->SetColor(colors->GetColor4d("Tomato").GetData());
-
-    // vtkSmartPointer<vtkRenderer> renderer = vtkRenderer::New();
-    // renderer->AddActor(sphereActor);
-    // renderer->SetBackground(colors->GetColor3d("SteelBlue").GetData());
-
-    // //m_RenderWindow.SetRenderWindow(renderWindow);
-
-
-    // //vtkSmartPointer<vtkRenderer> renderer = vtkSmartPointer<vtkRenderer>::New();
-    // //renderWindow->AddRenderer(renderer);
-    // m_RenderWindow.SetRenderWindow(renderWindow); 
-    // m_RenderWindow.resize(600, 600);
-
-    // m_RenderWindow.GetRenderWindow()->AddRenderer(renderer);
-    // //m_RenderWindow.show();
-
-    // //m_RenderWindow.show();
-    // //renderWindow->Render ();
-
-    // m_MainLayout.addWidget(&m_RenderWindow, 4, 0);
-
 
     max = OpacityArray[0][1];
     for(int i=1; i<OpacityArray.size(); i++) {
@@ -207,6 +156,12 @@ QSelectiveOpacityWidget::QSelectiveOpacityWidget(QWidget* pParent) :
     }
 
     Buffer = new float[max];
+
+    m_MainLayout.addWidget(&m_Tree, 0, 0);
+    m_MainLayout.addWidget(label, 1, 0);
+    m_MainLayout.addWidget(&m_OpacitySlider, 2, 0);
+    m_MainLayout.addWidget(&m_OpacitySpinnerWidget, 3, 0);
+    m_MainLayout.addWidget(&m_Button, 4, 0);
 
 }
 
@@ -275,7 +230,7 @@ void QSelectiveOpacityWidget::OnSelection(QTreeWidgetItem* Item, int col) {
 
 void QSelectiveOpacityWidget::OnButtonClick() {
     if (SubChanged) {
-        OpacityArray[Index][1] = (int)m_OpacitySpinnerWidget.value();
+        OpacityArray[Index][1] = (float)m_OpacitySpinnerWidget.value();
         //std::cout<<"CHANGED "<<OpacityArray[Index][1]<<"\n";
         ResetTex();
     }
@@ -285,7 +240,7 @@ void QSelectiveOpacityWidget::OnButtonClick() {
             NumChildren += MinorClass[i].childCount();
         }
         for(int i=NumChildren; i<(NumChildren+MinorClass[Index].childCount()); i++) {
-            OpacityArray[i][1] = (int)m_OpacitySpinnerWidget.value();
+            OpacityArray[i][1] = (float)m_OpacitySpinnerWidget.value();
         }
         ResetTex();
     }
@@ -300,7 +255,7 @@ void QSelectiveOpacityWidget::OnButtonClick() {
                 NumGChildren += MinorClass[j].childCount();
             }
             for(int j=NumGChildren; j<(NumGChildren+MinorClass[i].childCount()); j++) {
-                OpacityArray[j][1] = (int)m_OpacitySpinnerWidget.value();
+                OpacityArray[j][1] = (float)m_OpacitySpinnerWidget.value();
             }
         }
         ResetTex();
@@ -317,7 +272,7 @@ void QSelectiveOpacityWidget::ResetTex() {
     }
 
     for (int i = 0; i<OpacityArray.size(); i++) {
-        Buffer[OpacityArray[i][0]-1] = OpacityArray[i][1];
+        Buffer[(int)OpacityArray[i][0]-1] = OpacityArray[i][1];
     }
 
     gSelectiveOpacity.SetSize(max);

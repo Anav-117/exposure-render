@@ -22,7 +22,7 @@ class CVariance;
 
 extern "C" void SetgDensityScale (float nDensityScale);
 extern "C" void BindDensityBuffer(short* pBuffer, cudaExtent Extent);
-extern "C" void BindDensityBufferRGBA(uchar4* pBuffer, uchar4* pBufferRGB, cudaExtent Extent, cudaExtent ExtentRGB);
+extern "C" void BindDensityBufferRGBA(uchar4* pBuffer, short* pBufferRGB, cudaExtent Extent, cudaExtent ExtentRGB);
 extern "C" void BindGradientMagnitudeBuffer(short* pBuffer, cudaExtent Extent);
 extern "C" void UnbindDensityBuffer(void);
 extern "C" void UnbindDensityBufferRGBA(void);

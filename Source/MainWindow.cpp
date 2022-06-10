@@ -40,7 +40,8 @@ CMainWindow::CMainWindow() :
 	m_StatisticsDockWidget(),
 	m_CameraDockWidget(),
 	m_SelectiveOpacityDockWidget(),
-	m_SettingsDockWidget()
+	m_SettingsDockWidget(), 
+	m_MeshRenderingDockWidget()
 {
 	gpMainWindow = this;
 
@@ -140,11 +141,17 @@ void CMainWindow::SetupDockingWidgets()
     addDockWidget(Qt::RightDockWidgetArea, &m_LightingDockWidget);
     m_pViewMenu->addAction(m_LightingDockWidget.toggleViewAction());
 
-	// Lighting dock widget
+	// Selective Opacity dock widget
 	m_SelectiveOpacityDockWidget.setEnabled(false);
     m_SelectiveOpacityDockWidget.setAllowedAreas(Qt::AllDockWidgetAreas);
     addDockWidget(Qt::RightDockWidgetArea, &m_SelectiveOpacityDockWidget);
     m_pViewMenu->addAction(m_SelectiveOpacityDockWidget.toggleViewAction());
+
+	// Mesh Rendering dock widget
+	m_MeshRenderingDockWidget.setEnabled(false);
+    m_MeshRenderingDockWidget.setAllowedAreas(Qt::AllDockWidgetAreas);
+    addDockWidget(Qt::RightDockWidgetArea, &m_MeshRenderingDockWidget);
+    m_pViewMenu->addAction(m_MeshRenderingDockWidget.toggleViewAction());
 
 	// Appearance dock widget
 	m_AppearanceDockWidget.setEnabled(false);
@@ -178,6 +185,7 @@ void CMainWindow::SetupDockingWidgets()
 
 	tabifyDockWidget(&m_AppearanceDockWidget, &m_LightingDockWidget);
 	tabifyDockWidget(&m_AppearanceDockWidget, &m_SelectiveOpacityDockWidget);
+	tabifyDockWidget(&m_AppearanceDockWidget, &m_MeshRenderingDockWidget);
 //	tabifyDockWidget(&m_LightingDockWidget, &m_CameraDockWidget);
 //	tabifyDockWidget(&m_CameraDockWidget, &m_SettingsDockWidget);
 
@@ -325,6 +333,7 @@ void CMainWindow::OnRenderBegin(void)
 
 	m_LightingDockWidget.setEnabled(true);
 	m_SelectiveOpacityDockWidget.setEnabled(true);
+	m_MeshRenderingDockWidget.setEnabled(true);
 	m_AppearanceDockWidget.setEnabled(true);
 	m_StatisticsDockWidget.setEnabled(true);
 	m_CameraDockWidget.setEnabled(true);
@@ -344,6 +353,7 @@ void CMainWindow::OnRenderEnd(void)
 
 	m_LightingDockWidget.setEnabled(false);
 	m_SelectiveOpacityDockWidget.setEnabled(false);
+	m_MeshRenderingDockWidget.setEnabled(false);
 	m_AppearanceDockWidget.setEnabled(false);
 	m_StatisticsDockWidget.setEnabled(false);
 	m_CameraDockWidget.setEnabled(false);

@@ -14,14 +14,14 @@
 #include "Core.cuh"
 
 texture<short, cudaTextureType3D, cudaReadModeNormalizedFloat>				gTexDensity;
-texture<uchar4, cudaTextureType3D, cudaReadModeNormalizedFloat>				gTexDensityRGB;
+texture<short, cudaTextureType3D, cudaReadModeNormalizedFloat>				gTexDensityRGB;
 texture<uchar4, cudaTextureType3D, cudaReadModeNormalizedFloat>				gTexDensityRGBA;
 texture<short, cudaTextureType3D, cudaReadModeNormalizedFloat>				gTexGradientMagnitude;
 texture<float, cudaTextureType3D, cudaReadModeElementType>					gTexExtinction;
 texture<float, cudaTextureType1D, cudaReadModeElementType>					gTexSelectiveOpacity;
 texture<float, cudaTextureType1D, cudaReadModeElementType>					gTexOpacity;
 texture<uchar4, cudaTextureType3D, cudaReadModeElementType>					gTexOpacityRGBA;
-texture<uchar4, cudaTextureType3D, cudaReadModeElementType>					gTexOpacityRGB;
+texture<short, cudaTextureType3D, cudaReadModeElementType>					gTexOpacityRGB;
 texture<float4, cudaTextureType1D, cudaReadModeElementType>					gTexDiffuse;
 texture<uchar4, cudaTextureType3D, cudaReadModeElementType>					gTexDiffuseRGBA;
 texture<float4, cudaTextureType1D, cudaReadModeElementType>					gTexSpecular;
@@ -95,12 +95,12 @@ CCudaModel	gModel;
 CCudaView	gRenderCanvasView;
 CCudaView	gNavigatorView;
 
-void BindDensityBufferRGBA(uchar4* pBuffer, uchar4* pBufferRGB, cudaExtent Extent, cudaExtent ExtentRGB)
+void BindDensityBufferRGBA(uchar4* pBuffer, short* pBufferRGB, cudaExtent Extent, cudaExtent ExtentRGB)
 {
 	RGBA = true;
 
 	cudaChannelFormatDesc ChannelDesc = cudaCreateChannelDesc<uchar4>();
-	cudaChannelFormatDesc ChannelDescRGB = cudaCreateChannelDesc<uchar4>();
+	cudaChannelFormatDesc ChannelDescRGB = cudaCreateChannelDesc<short>();
 
 	HandleCudaError(cudaMalloc3DArray(&gpDensityArray, &ChannelDesc, Extent));
 	HandleCudaError(cudaMalloc3DArray(&gpDensityArrayRGB, &ChannelDescRGB, ExtentRGB));
@@ -116,7 +116,7 @@ void BindDensityBufferRGBA(uchar4* pBuffer, uchar4* pBufferRGB, cudaExtent Exten
 
 	cudaMemcpy3DParms CopyParamsRGB = {0};
 
-	CopyParamsRGB.srcPtr	= make_cudaPitchedPtr(pBufferRGB, ExtentRGB.width * sizeof(uchar4), ExtentRGB.width, ExtentRGB.height);
+	CopyParamsRGB.srcPtr	= make_cudaPitchedPtr(pBufferRGB, ExtentRGB.width * sizeof(short), ExtentRGB.width, ExtentRGB.height);
 	CopyParamsRGB.dstArray	= gpDensityArrayRGB;
 	CopyParamsRGB.extent	= ExtentRGB;
 	CopyParamsRGB.kind		= cudaMemcpyHostToDevice;
@@ -285,7 +285,7 @@ void BindTextureSelectiveOpacity(float* Buffer, int BufferSize) {
 
 	float* dInput = NULL, *dOutput = NULL;
 
-	size_t offset = 0;
+	//size_t offset = 0;
 
 	gTexSelectiveOpacity.addressMode[0] = cudaAddressModeBorder;
 	gTexSelectiveOpacity.filterMode = cudaFilterModePoint;
@@ -328,11 +328,14 @@ void BindTransferFunctionOpacity(CTransferFunction& TransferFunctionOpacity)
 	gTexOpacityRGBA.addressMode[0]	= cudaAddressModeBorder;  
 	gTexOpacityRGBA.addressMode[1]	= cudaAddressModeBorder;
   	gTexOpacityRGBA.addressMode[2]	= cudaAddressModeBorder;
+	gTexOpacityRGB.addressMode[0]	= cudaAddressModeBorder;  
+	gTexOpacityRGB.addressMode[1]	= cudaAddressModeBorder;
+  	gTexOpacityRGB.addressMode[2]	= cudaAddressModeBorder;
 
 	if (RGBA) {
 		cudaChannelFormatDesc ChannelDesc = cudaCreateChannelDesc<uchar4>();
 		HandleCudaError(cudaBindTextureToArray(gTexOpacityRGBA, gpDensityArray, ChannelDesc));
-		cudaChannelFormatDesc ChannelDescRGB = cudaCreateChannelDesc<uchar4>();
+		cudaChannelFormatDesc ChannelDescRGB = cudaCreateChannelDesc<short>();
 		HandleCudaError(cudaBindTextureToArray(gTexOpacityRGB, gpDensityArrayRGB, ChannelDescRGB));
 	}
 	else {

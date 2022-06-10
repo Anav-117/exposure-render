@@ -67,7 +67,7 @@ private:
 //	CCudaFrameBuffers	m_CudaFrameBuffers;
 	CColorRgbLdr*		m_pRenderImage;
 	short*				m_pDensityBuffer;
-	uchar4*				m_pDensityBufferRGB;
+	short*				m_pDensityBufferRGB;
 	uchar4*				m_pDensityBufferRGBA;
 	float*				m_pOpacityBuffer;
 	short*				m_pGradientMagnitudeBuffer;
