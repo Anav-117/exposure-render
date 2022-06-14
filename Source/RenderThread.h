@@ -20,7 +20,7 @@ class QFrameBuffer
 public:
 	QFrameBuffer(void);
 	QFrameBuffer(const QFrameBuffer& Other);
-	QFrameBuffer& QFrameBuffer::operator=(const QFrameBuffer& Other);
+	QFrameBuffer& operator=(const QFrameBuffer& Other);
 	virtual ~QFrameBuffer(void);
 	void Set(unsigned char* pPixels, const int& Width, const int& Height);
 	unsigned char* GetPixels(void) { return m_pPixels; }
@@ -47,24 +47,31 @@ public:
 	QRenderThread(const QString& FileName = "", QObject* pParent = NULL);
 	QRenderThread(const QRenderThread& Other);
 	virtual ~QRenderThread(void);
-	QRenderThread& QRenderThread::operator=(const QRenderThread& Other);
+	QRenderThread& operator=(const QRenderThread& Other);
 
 	void run();
 
 	bool			Load(QString& FileName);
+	bool			LoadRGBA(QString& FileName);
 
 	QString			GetFileName(void) const						{	return m_FileName;		}
 	void			SetFileName(const QString& FileName)		{	m_FileName = FileName;	}
 	CColorRgbLdr*	GetRenderImage(void) const;
 	void			Close(void)									{	m_Abort = true;			}
 	void			PauseRendering(const bool& Pause)			{	m_Pause = Pause;		}
+	void 			SetOpacity(float* OpacityArray);
+	void 			SetDensityScale(float* DensityScaleArray);
 	
 private:
 	QString				m_FileName;
 //	CCudaFrameBuffers	m_CudaFrameBuffers;
 	CColorRgbLdr*		m_pRenderImage;
 	short*				m_pDensityBuffer;
+	short*				m_pDensityBufferRGB;
+	uchar4*				m_pDensityBufferRGBA;
+	float*				m_pOpacityBuffer;
 	short*				m_pGradientMagnitudeBuffer;
+	bool				RGBAVolume = false;
 
 
 public:
@@ -81,12 +88,14 @@ public slots:
 	void OnUpdateCamera(void);
 	void OnUpdateLighting(void);
 	void OnRenderPause(const bool& Pause);
+	void OnUpdateSelectiveOpacity(void);
 };
 
 // Render thread
 extern QRenderThread* gpRenderThread;
 
 void StartRenderThread(QString& FileName);
+void StartRenderThreadRGBA(QString& FileName);
 void KillRenderThread(void);
 
 extern QMutex gSceneMutex;

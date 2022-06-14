@@ -39,7 +39,9 @@ CMainWindow::CMainWindow() :
 	m_AppearanceDockWidget(),
 	m_StatisticsDockWidget(),
 	m_CameraDockWidget(),
-	m_SettingsDockWidget()
+	m_SelectiveOpacityDockWidget(),
+	m_SettingsDockWidget(), 
+	m_MeshRenderingDockWidget()
 {
 	gpMainWindow = this;
 
@@ -59,9 +61,9 @@ CMainWindow::CMainWindow() :
 
 	QObject::connect(&gStatus, SIGNAL(RenderBegin()), this, SLOT(OnRenderBegin()));
 	QObject::connect(&gStatus, SIGNAL(RenderEnd()), this, SLOT(OnRenderEnd()));
-	QObject::connect(&m_HttpGet, SIGNAL(done()), this, SLOT(VersionInfoDownloaded()));
+	//QObject::connect(&m_HttpGet, SIGNAL(done()), this, SLOT(VersionInfoDownloaded()));
 
-	OnCheckForUpdates();
+	//OnCheckForUpdates();
 }
 
 CMainWindow::~CMainWindow(void)
@@ -74,6 +76,8 @@ void CMainWindow::CreateMenus(void)
 	m_pFileMenu = menuBar()->addMenu(tr("&File"));
 
 	m_pFileMenu->addAction(GetIcon("folder-open-document"), "Open", this, SLOT(Open()));
+
+	m_pFileMenu->addAction(GetIcon("folder-open-document"), "Open RGBA Volume", this, SLOT(OpenRGBA()));
 
 	m_pFileMenu->addSeparator();
 
@@ -137,6 +141,18 @@ void CMainWindow::SetupDockingWidgets()
     addDockWidget(Qt::RightDockWidgetArea, &m_LightingDockWidget);
     m_pViewMenu->addAction(m_LightingDockWidget.toggleViewAction());
 
+	// Selective Opacity dock widget
+	m_SelectiveOpacityDockWidget.setEnabled(false);
+    m_SelectiveOpacityDockWidget.setAllowedAreas(Qt::AllDockWidgetAreas);
+    addDockWidget(Qt::RightDockWidgetArea, &m_SelectiveOpacityDockWidget);
+    m_pViewMenu->addAction(m_SelectiveOpacityDockWidget.toggleViewAction());
+
+	// Mesh Rendering dock widget
+	m_MeshRenderingDockWidget.setEnabled(false);
+    m_MeshRenderingDockWidget.setAllowedAreas(Qt::AllDockWidgetAreas);
+    addDockWidget(Qt::RightDockWidgetArea, &m_MeshRenderingDockWidget);
+    m_pViewMenu->addAction(m_MeshRenderingDockWidget.toggleViewAction());
+
 	// Appearance dock widget
 	m_AppearanceDockWidget.setEnabled(false);
 	m_AppearanceDockWidget.setAllowedAreas(Qt::AllDockWidgetAreas);
@@ -168,6 +184,8 @@ void CMainWindow::SetupDockingWidgets()
 //  m_pViewMenu->addAction(m_SettingsDockWidget.toggleViewAction());
 
 	tabifyDockWidget(&m_AppearanceDockWidget, &m_LightingDockWidget);
+	tabifyDockWidget(&m_AppearanceDockWidget, &m_SelectiveOpacityDockWidget);
+	tabifyDockWidget(&m_AppearanceDockWidget, &m_MeshRenderingDockWidget);
 //	tabifyDockWidget(&m_LightingDockWidget, &m_CameraDockWidget);
 //	tabifyDockWidget(&m_CameraDockWidget, &m_SettingsDockWidget);
 
@@ -243,7 +261,35 @@ void CMainWindow::Open()
 	Open(FileName);
 }
 
+void CMainWindow::OpenRGBA()
+{
+	// Create open file dialog
+	QString FileName = GetOpenFileName("Open volume", "Meta Image Volume Files (*.mhd)", "grid");
+
+	// Exit empty
+	if (FileName.isEmpty())
+		return;
+
+	// Open the file
+	OpenRGBA(FileName);
+}
+
 void CMainWindow::Open(QString FilePath)
+{
+	// Kill current rendering thread
+	KillRenderThread();
+
+	// Window name update
+	SetCurrentFile(FilePath);
+
+	// Make string suitable for VTK
+	//FilePath.replace("/", "\\\\");
+
+ 	if (!FilePath.isEmpty())
+ 		StartRenderThread(FilePath);
+}
+
+void CMainWindow::OpenRGBA(QString FilePath)
 {
 	// Kill current rendering thread
 	KillRenderThread();
@@ -254,8 +300,8 @@ void CMainWindow::Open(QString FilePath)
 	// Make string suitable for VTK
 	FilePath.replace("/", "\\\\");
 
- 	if (!FilePath.isEmpty())
- 		StartRenderThread(FilePath);
+	if (!FilePath.isEmpty())
+		StartRenderThreadRGBA(FilePath);
 }
 
 void CMainWindow::OnLoadDemo(const QString& FileName)
@@ -286,6 +332,8 @@ void CMainWindow::OnRenderBegin(void)
 	Log("Rendering started", "control");
 
 	m_LightingDockWidget.setEnabled(true);
+	m_SelectiveOpacityDockWidget.setEnabled(true);
+	m_MeshRenderingDockWidget.setEnabled(true);
 	m_AppearanceDockWidget.setEnabled(true);
 	m_StatisticsDockWidget.setEnabled(true);
 	m_CameraDockWidget.setEnabled(true);
@@ -304,6 +352,8 @@ void CMainWindow::OnRenderEnd(void)
 	}
 
 	m_LightingDockWidget.setEnabled(false);
+	m_SelectiveOpacityDockWidget.setEnabled(false);
+	m_MeshRenderingDockWidget.setEnabled(false);
 	m_AppearanceDockWidget.setEnabled(false);
 	m_StatisticsDockWidget.setEnabled(false);
 	m_CameraDockWidget.setEnabled(false);
@@ -358,7 +408,7 @@ void CMainWindow::VersionInfoDownloaded(void)
 
 	if (!XmlFile.open(QIODevice::ReadOnly))
 	{
-		Log(QString("Failed to open " + QFileInfo(FilePath).fileName() + " for reading: " + XmlFile.errorString()).toAscii(), QLogger::Critical);
+		Log(QString("Failed to open " + QFileInfo(FilePath).fileName() + " for reading: " + XmlFile.errorString()).toLatin1(), QLogger::Critical);
 		return;
 	}
 

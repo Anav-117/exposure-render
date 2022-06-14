@@ -33,7 +33,7 @@ public:
 public:
 	HO CDenoiseParams(void);
 
-	HOD CDenoiseParams& CDenoiseParams::operator=(const CDenoiseParams& Other)
+	HOD CDenoiseParams& operator=(const CDenoiseParams& Other)
 	{
 		m_Enabled			= Other.m_Enabled;
 		m_Noise				= Other.m_Noise;
@@ -65,11 +65,13 @@ public:
 	CCamera				m_Camera;
 	CLighting			m_Lighting;
 	CResolution3D		m_Resolution;
+	CResolution3D		m_ResolutionSegment;
 	CFlags				m_DirtyFlags;
 	Vec3f				m_Spacing;
 	Vec3f				m_Scale;
 	CBoundingBox		m_BoundingBox;
 	CTransferFunctions	m_TransferFunctions;
+	CSelectiveOpacity	m_SelectiveOpacity;
 	CRange				m_IntensityRange;
 	CRange				m_GradientMagnitudeRange;
 	float				m_DensityScale;
@@ -81,6 +83,8 @@ public:
 	float				m_GradientDelta;
 	float				m_GradientFactor;
 	float				m_GradMagMean;
+	bool				m_RGBA;
+	bool				m_SegmentAvailable;
 
 	HOD int GetNoIterations(void) const					{ return m_NoIterations;			}
 	HOD void SetNoIterations(const int& NoIterations)	{ m_NoIterations = NoIterations;	}

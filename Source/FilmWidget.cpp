@@ -17,6 +17,7 @@
 #include "RenderThread.h"
 #include "Camera.h"
 #include "Scene.h"
+#include <unistd.h>
 
 QFilmWidget::QFilmWidget(QWidget* pParent) :
 	QGroupBox(pParent),
@@ -147,7 +148,7 @@ void QFilmWidget::SetPresetType(const QString& PresetType)
 	if (PresetType == "HDTV (video)")
 	{
 		m_Preset[0].SetPreset(1920, 1080);
-		m_Preset[1].SetPreset(490, 270);
+		m_Preset[1].SetPreset(0, 0);
 		m_Preset[2].SetPreset(1280, 720);
 		m_Preset[3].SetPreset(320, 180);
 	}
@@ -155,6 +156,19 @@ void QFilmWidget::SetPresetType(const QString& PresetType)
 
 void QFilmWidget::SetPreset(QFilmResolutionPreset& Preset)
 {
+	if (Preset.GetWidth() == 0) {
+		int i = 0;
+		string OutputPath = gCamera.GetPoseFileDir() + "/Renders/";
+		if (!QDir(QString::fromStdString(OutputPath)).exists())
+			QDir().mkdir(QString::fromStdString(OutputPath));
+		while (gCamera.CycleCameraParams()) {				
+			sleep(3);
+			SaveImage((unsigned char*)gpRenderThread->GetRenderImage(), gScene.m_Camera.m_Film.m_Resolution.GetResX(), gScene.m_Camera.m_Film.m_Resolution.GetResY(), QString::fromStdString(OutputPath + std::to_string(i) + ".png"));
+			i++;
+		}
+		return;
+	}
+
 	m_WidthSpinner.setValue(Preset.GetWidth());
 	m_HeightSpinner.setValue(Preset.GetHeight());
 }

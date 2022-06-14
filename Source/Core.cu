@@ -13,19 +13,27 @@
 
 #include "Core.cuh"
 
-texture<short, cudaTextureType3D, cudaReadModeNormalizedFloat>		gTexDensity;
-texture<short, cudaTextureType3D, cudaReadModeNormalizedFloat>		gTexGradientMagnitude;
-texture<float, cudaTextureType3D, cudaReadModeElementType>			gTexExtinction;
-texture<float, cudaTextureType1D, cudaReadModeElementType>			gTexOpacity;
-texture<float4, cudaTextureType1D, cudaReadModeElementType>			gTexDiffuse;
-texture<float4, cudaTextureType1D, cudaReadModeElementType>			gTexSpecular;
-texture<float, cudaTextureType1D, cudaReadModeElementType>			gTexRoughness;
-texture<float4, cudaTextureType1D, cudaReadModeElementType>			gTexEmission;
-texture<uchar4, cudaTextureType2D, cudaReadModeNormalizedFloat>		gTexRunningEstimateRgba;
+texture<short, cudaTextureType3D, cudaReadModeNormalizedFloat>				gTexDensity;
+texture<short, cudaTextureType3D, cudaReadModeNormalizedFloat>				gTexDensityRGB;
+texture<uchar4, cudaTextureType3D, cudaReadModeNormalizedFloat>				gTexDensityRGBA;
+texture<short, cudaTextureType3D, cudaReadModeNormalizedFloat>				gTexGradientMagnitude;
+texture<float, cudaTextureType3D, cudaReadModeElementType>					gTexExtinction;
+texture<float, cudaTextureType1D, cudaReadModeElementType>					gTexSelectiveOpacity;
+texture<float, cudaTextureType1D, cudaReadModeElementType>					gTexOpacity;
+texture<uchar4, cudaTextureType3D, cudaReadModeElementType>					gTexOpacityRGBA;
+texture<short, cudaTextureType3D, cudaReadModeElementType>					gTexOpacityRGB;
+texture<float4, cudaTextureType1D, cudaReadModeElementType>					gTexDiffuse;
+texture<uchar4, cudaTextureType3D, cudaReadModeElementType>					gTexDiffuseRGBA;
+texture<float4, cudaTextureType1D, cudaReadModeElementType>					gTexSpecular;
+texture<float, cudaTextureType1D, cudaReadModeElementType>					gTexRoughness;
+texture<float4, cudaTextureType1D, cudaReadModeElementType>					gTexEmission;
+texture<uchar4, cudaTextureType2D, cudaReadModeNormalizedFloat>				gTexRunningEstimateRgba;
 
 cudaArray* gpDensityArray				= NULL;
+cudaArray* gpDensityArrayRGB			= NULL;
 cudaArray* gpGradientMagnitudeArray		= NULL;
 cudaArray* gpOpacityArray				= NULL;
+cudaArray* gpSelectiveOpacityArray		= NULL;
 cudaArray* gpDiffuseArray				= NULL;
 cudaArray* gpSpecularArray				= NULL;
 cudaArray* gpRoughnessArray				= NULL;
@@ -66,6 +74,8 @@ CD float		gDenoiseLerpC;
 CD float		gNoIterations;
 CD float		gInvNoIterations;
 
+bool			RGBA = false;
+
 #define TF_NO_SAMPLES		128
 #define INV_TF_NO_SAMPLES	1.0f / (float)TF_NO_SAMPLES
 
@@ -76,6 +86,7 @@ CD float		gInvNoIterations;
 #include "Estimate.cuh"
 #include "Utilities.cuh"
 #include "SingleScattering.cuh"
+#include "MultipleScattering.cuh"
 #include "NearestIntersection.cuh"
 #include "SpecularBloom.cuh"
 #include "ToneMap.cuh"
@@ -83,6 +94,52 @@ CD float		gInvNoIterations;
 CCudaModel	gModel;
 CCudaView	gRenderCanvasView;
 CCudaView	gNavigatorView;
+
+void BindDensityBufferRGBA(uchar4* pBuffer, short* pBufferRGB, cudaExtent Extent, cudaExtent ExtentRGB)
+{
+	RGBA = true;
+
+	cudaChannelFormatDesc ChannelDesc = cudaCreateChannelDesc<uchar4>();
+	cudaChannelFormatDesc ChannelDescRGB = cudaCreateChannelDesc<short>();
+
+	HandleCudaError(cudaMalloc3DArray(&gpDensityArray, &ChannelDesc, Extent));
+	HandleCudaError(cudaMalloc3DArray(&gpDensityArrayRGB, &ChannelDescRGB, ExtentRGB));
+	
+	cudaMemcpy3DParms CopyParams = {0};
+
+	CopyParams.srcPtr	= make_cudaPitchedPtr(pBuffer, Extent.width * sizeof(uchar4), Extent.width, Extent.height);
+	CopyParams.dstArray	= gpDensityArray;
+	CopyParams.extent	= Extent;
+	CopyParams.kind		= cudaMemcpyHostToDevice;
+
+	HandleCudaError(cudaMemcpy3D(&CopyParams));
+
+	cudaMemcpy3DParms CopyParamsRGB = {0};
+
+	CopyParamsRGB.srcPtr	= make_cudaPitchedPtr(pBufferRGB, ExtentRGB.width * sizeof(short), ExtentRGB.width, ExtentRGB.height);
+	CopyParamsRGB.dstArray	= gpDensityArrayRGB;
+	CopyParamsRGB.extent	= ExtentRGB;
+	CopyParamsRGB.kind		= cudaMemcpyHostToDevice;
+	
+	HandleCudaError(cudaMemcpy3D(&CopyParamsRGB));
+
+	gTexDensityRGBA.normalized		= true;
+	gTexDensityRGBA.filterMode		= cudaFilterModeLinear;      
+	gTexDensityRGBA.addressMode[0]	= cudaAddressModeClamp;  
+	gTexDensityRGBA.addressMode[1]	= cudaAddressModeClamp;
+  	gTexDensityRGBA.addressMode[2]	= cudaAddressModeClamp;
+
+	gTexDensityRGB.normalized		= true;
+	gTexDensityRGB.filterMode		= cudaFilterModeLinear;      
+	gTexDensityRGB.addressMode[0]	= cudaAddressModeClamp;  
+	gTexDensityRGB.addressMode[1]	= cudaAddressModeClamp;
+  	gTexDensityRGB.addressMode[2]	= cudaAddressModeClamp;
+
+	HandleCudaError(cudaBindTextureToArray(gTexDensityRGBA, gpDensityArray, ChannelDesc));
+	HandleCudaError(cudaBindTextureToArray(gTexDensityRGB, gpDensityArrayRGB, ChannelDescRGB));
+
+	printf("BUFFERS LOADED\n");
+}
 
 void BindDensityBuffer(short* pBuffer, cudaExtent Extent)
 {
@@ -106,6 +163,7 @@ void BindDensityBuffer(short* pBuffer, cudaExtent Extent)
   	gTexDensity.addressMode[2]	= cudaAddressModeClamp;
 
 	HandleCudaError(cudaBindTextureToArray(gTexDensity, gpDensityArray, ChannelDesc));
+	printf("BUFFER READY\n");
 }
 
 void BindGradientMagnitudeBuffer(short* pBuffer, cudaExtent Extent)
@@ -136,6 +194,13 @@ void UnbindDensityBuffer(void)
 	HandleCudaError(cudaFreeArray(gpDensityArray));
 	gpDensityArray = NULL;
 	HandleCudaError(cudaUnbindTexture(gTexDensity));
+}
+
+void UnbindDensityBufferRGBA(void)
+{
+	HandleCudaError(cudaFreeArray(gpDensityArray));
+	gpDensityArray = NULL;
+	HandleCudaError(cudaUnbindTexture(gTexDensityRGBA));
 }
 
 void UnbindGradientMagnitudeBuffer(void)
@@ -171,24 +236,122 @@ unsigned char* GetDisplayEstimate(void)
 	return (unsigned char*)gRenderCanvasView.m_DisplayEstimateRgbLdr.GetPtr(0, 0);
 }
 
+void BindOpacityRGBA(float* pBuffer, int num) {
+	gTexOpacity.normalized		= true;
+	gTexOpacity.filterMode		= cudaFilterModeLinear;
+	gTexOpacity.addressMode[0]	= cudaAddressModeClamp;
+
+	gTexOpacityRGB.addressMode[0]	= cudaAddressModeBorder;  
+	gTexOpacityRGB.addressMode[1]	= cudaAddressModeBorder;
+  	gTexOpacityRGB.addressMode[2]	= cudaAddressModeBorder;
+
+	float* Opacity = new float[num];
+	for (int i = 0; i<num; i++) {
+		Opacity[i] = (float) pBuffer[i];
+	}
+
+	cudaChannelFormatDesc ChannelDescOpacity = cudaCreateChannelDesc<float>();
+
+	if (gpOpacityArray == NULL)
+		HandleCudaError(cudaMallocArray(&gpOpacityArray, &ChannelDescOpacity, num, 1));
+
+	HandleCudaError(cudaMemcpyToArray(gpOpacityArray, 0, 0, Opacity, num * sizeof(float), cudaMemcpyHostToDevice));
+	HandleCudaError(cudaBindTextureToArray(gTexOpacity, gpOpacityArray, ChannelDescOpacity));
+
+	cudaChannelFormatDesc ChannelDesc = cudaCreateChannelDesc<uchar4>();
+	HandleCudaError(cudaBindTextureToArray(gTexOpacityRGBA, gpDensityArray, ChannelDesc));
+	cudaChannelFormatDesc ChannelDescRGB = cudaCreateChannelDesc<uchar4>();
+	HandleCudaError(cudaBindTextureToArray(gTexOpacityRGB, gpDensityArrayRGB, ChannelDescRGB));
+}
+
+__global__ void copyKernel(float*output, int n) {
+	for (int i = 0; i < n; i++) {
+		output[i] = tex1D(gTexSelectiveOpacity, (float)i);
+	}
+}
+
+void BindTextureSelectiveOpacity(float* Buffer, int BufferSize) {
+
+	const int WIDTH = BufferSize;
+
+	//printf("%d\n", BufferSize);
+
+	float* hInput = (float*)malloc(sizeof(float) * WIDTH);
+	float*hOutput = (float*)malloc(sizeof(float) * WIDTH);
+
+	for (int i = 0; i < WIDTH; i++) {
+		hInput[i] = (float)Buffer[i];
+	}
+
+	float* dInput = NULL, *dOutput = NULL;
+
+	//size_t offset = 0;
+
+	gTexSelectiveOpacity.addressMode[0] = cudaAddressModeBorder;
+	gTexSelectiveOpacity.filterMode = cudaFilterModePoint;
+	gTexSelectiveOpacity.normalized = false;
+
+	HandleCudaError(cudaMalloc((void**)&dInput, sizeof(float)*WIDTH));
+	HandleCudaError(cudaMalloc((void**)&dOutput, sizeof(float)*WIDTH));
+
+	HandleCudaError(cudaMemcpy(dInput, hInput, sizeof(float)*WIDTH, cudaMemcpyHostToDevice));
+
+	//HandleCudaError(cudaBindTexture(&offset, gTexSelectiveOpacity, dInput, sizeof(float)*WIDTH));
+
+	cudaChannelFormatDesc ChannelDesc = cudaCreateChannelDesc<float>();
+
+	HandleCudaError(cudaMallocArray(&gpSelectiveOpacityArray, &ChannelDesc, WIDTH, 1));
+
+	HandleCudaError(cudaMemcpyToArray(gpSelectiveOpacityArray, 0, 0, dInput, sizeof(float) * WIDTH, cudaMemcpyDeviceToDevice));
+	HandleCudaError(cudaBindTextureToArray(gTexSelectiveOpacity, gpSelectiveOpacityArray, ChannelDesc));
+	
+	//copyKernel<<<1,1>>>(dOutput, WIDTH);
+
+	//HandleCudaError(cudaMemcpy(hOutput, dOutput, sizeof(float)*WIDTH, cudaMemcpyDeviceToHost));
+	//printf("\nInput = ");
+
+	//for (int i = 0; i < WIDTH; i++) {
+	//		printf("%f\t",hInput[i]);
+	//	}
+	//printf("\nOutput = ");
+	//for (int i = 0; i < WIDTH; i++) {
+	//	printf("%f %d\t",hOutput[i], i);
+	//}
+}
+
 void BindTransferFunctionOpacity(CTransferFunction& TransferFunctionOpacity)
 {
 	gTexOpacity.normalized		= true;
 	gTexOpacity.filterMode		= cudaFilterModeLinear;
 	gTexOpacity.addressMode[0]	= cudaAddressModeClamp;
 
-	float Opacity[TF_NO_SAMPLES];
+	gTexOpacityRGBA.addressMode[0]	= cudaAddressModeBorder;  
+	gTexOpacityRGBA.addressMode[1]	= cudaAddressModeBorder;
+  	gTexOpacityRGBA.addressMode[2]	= cudaAddressModeBorder;
+	gTexOpacityRGB.addressMode[0]	= cudaAddressModeBorder;  
+	gTexOpacityRGB.addressMode[1]	= cudaAddressModeBorder;
+  	gTexOpacityRGB.addressMode[2]	= cudaAddressModeBorder;
 
-	for (int i = 0; i < TF_NO_SAMPLES; i++)
+	if (RGBA) {
+		cudaChannelFormatDesc ChannelDesc = cudaCreateChannelDesc<uchar4>();
+		HandleCudaError(cudaBindTextureToArray(gTexOpacityRGBA, gpDensityArray, ChannelDesc));
+		cudaChannelFormatDesc ChannelDescRGB = cudaCreateChannelDesc<short>();
+		HandleCudaError(cudaBindTextureToArray(gTexOpacityRGB, gpDensityArrayRGB, ChannelDescRGB));
+	}
+	else {
+		//printf("TF\n");
+		float Opacity[TF_NO_SAMPLES];	
+		for (int i = 0; i < TF_NO_SAMPLES; i++)
 		Opacity[i] = TransferFunctionOpacity.F((float)i * INV_TF_NO_SAMPLES).r;
 	
-	cudaChannelFormatDesc ChannelDesc = cudaCreateChannelDesc<float>();
+		cudaChannelFormatDesc ChannelDesc = cudaCreateChannelDesc<float>();
 
-	if (gpOpacityArray == NULL)
-		HandleCudaError(cudaMallocArray(&gpOpacityArray, &ChannelDesc, TF_NO_SAMPLES, 1));
+		if (gpOpacityArray == NULL)
+			HandleCudaError(cudaMallocArray(&gpOpacityArray, &ChannelDesc, TF_NO_SAMPLES, 1));
 
-	HandleCudaError(cudaMemcpyToArray(gpOpacityArray, 0, 0, Opacity, TF_NO_SAMPLES * sizeof(float), cudaMemcpyHostToDevice));
-	HandleCudaError(cudaBindTextureToArray(gTexOpacity, gpOpacityArray, ChannelDesc));
+		HandleCudaError(cudaMemcpyToArray(gpOpacityArray, 0, 0, Opacity, TF_NO_SAMPLES * sizeof(float), cudaMemcpyHostToDevice));
+		HandleCudaError(cudaBindTextureToArray(gTexOpacity, gpOpacityArray, ChannelDesc));
+	}
 }
 
 void UnbindTransferFunctionOpacity(void)
@@ -204,22 +367,35 @@ void BindTransferFunctionDiffuse(CTransferFunction& TransferFunctionDiffuse)
 	gTexDiffuse.filterMode		= cudaFilterModeLinear;
 	gTexDiffuse.addressMode[0]	= cudaAddressModeClamp;
 
-	float4 Diffuse[TF_NO_SAMPLES];
+	gTexDiffuseRGBA.addressMode[0]	= cudaAddressModeBorder;  
+	gTexDiffuseRGBA.addressMode[1]	= cudaAddressModeBorder;
+  	gTexDiffuseRGBA.addressMode[2]	= cudaAddressModeBorder;
 
-	for (int i = 0; i < TF_NO_SAMPLES; i++)
-	{
-		Diffuse[i].x = TransferFunctionDiffuse.F((float)i * INV_TF_NO_SAMPLES).r;
-		Diffuse[i].y = TransferFunctionDiffuse.F((float)i * INV_TF_NO_SAMPLES).g;
-		Diffuse[i].z = TransferFunctionDiffuse.F((float)i * INV_TF_NO_SAMPLES).b;
+	if (RGBA) {
+        cudaChannelFormatDesc ChannelDesc = cudaCreateChannelDesc<uchar4>();
+
+	    HandleCudaError(cudaBindTextureToArray(gTexDiffuseRGBA, gpDensityArray, ChannelDesc));
+        //printf("DIFFUSE COMPLETE\n");
+    }
+    else {
+        float4 Diffuse[TF_NO_SAMPLES];
+
+	    for (int i = 0; i < TF_NO_SAMPLES; i++)
+	    {
+		    Diffuse[i].x = TransferFunctionDiffuse.F((float)i * INV_TF_NO_SAMPLES).r;
+		    Diffuse[i].y = TransferFunctionDiffuse.F((float)i * INV_TF_NO_SAMPLES).g;
+		    Diffuse[i].z = TransferFunctionDiffuse.F((float)i * INV_TF_NO_SAMPLES).b;
+	    }
+
+
+	    cudaChannelFormatDesc ChannelDesc = cudaCreateChannelDesc<float4>();	
+
+		if (gpDiffuseArray == NULL)
+			HandleCudaError(cudaMallocArray(&gpDiffuseArray, &ChannelDesc, TF_NO_SAMPLES, 1));
+
+		HandleCudaError(cudaMemcpyToArray(gpDiffuseArray, 0, 0, Diffuse, TF_NO_SAMPLES * sizeof(float4), cudaMemcpyHostToDevice));
+		HandleCudaError(cudaBindTextureToArray(gTexDiffuse, gpDiffuseArray, ChannelDesc));
 	}
-
-	cudaChannelFormatDesc ChannelDesc = cudaCreateChannelDesc<float4>();
-	
-	if (gpDiffuseArray == NULL)
-		HandleCudaError(cudaMallocArray(&gpDiffuseArray, &ChannelDesc, TF_NO_SAMPLES, 1));
-
-	HandleCudaError(cudaMemcpyToArray(gpDiffuseArray, 0, 0, Diffuse, TF_NO_SAMPLES * sizeof(float4), cudaMemcpyHostToDevice));
-	HandleCudaError(cudaBindTextureToArray(gTexDiffuse, gpDiffuseArray, ChannelDesc));
 }
 
 void UnbindTransferFunctionDiffuse(void)
@@ -320,37 +496,41 @@ void UnbindTransferFunctionEmission(void)
 
 void BindConstants(CScene* pScene)
 {
+	const float gRx = pScene->m_Resolution[0];
+    const float gRy = pScene->m_Resolution[1];
+    const float gRz = pScene->m_Resolution[2];
+
 	const float3 AaBbMin = make_float3(pScene->m_BoundingBox.GetMinP().x, pScene->m_BoundingBox.GetMinP().y, pScene->m_BoundingBox.GetMinP().z);
 	const float3 AaBbMax = make_float3(pScene->m_BoundingBox.GetMaxP().x, pScene->m_BoundingBox.GetMaxP().y, pScene->m_BoundingBox.GetMaxP().z);
 
-	HandleCudaError(cudaMemcpyToSymbol("gAaBbMin", &AaBbMin, sizeof(float3)));
-	HandleCudaError(cudaMemcpyToSymbol("gAaBbMax", &AaBbMax, sizeof(float3)));
+	HandleCudaError(cudaMemcpyToSymbol(gAaBbMin, &AaBbMin, sizeof(float3)));
+	HandleCudaError(cudaMemcpyToSymbol(gAaBbMax, &AaBbMax, sizeof(float3)));
 
 	const float3 InvAaBbMin = make_float3(pScene->m_BoundingBox.GetInvMinP().x, pScene->m_BoundingBox.GetInvMinP().y, pScene->m_BoundingBox.GetInvMinP().z);
 	const float3 InvAaBbMax = make_float3(pScene->m_BoundingBox.GetInvMaxP().x, pScene->m_BoundingBox.GetInvMaxP().y, pScene->m_BoundingBox.GetInvMaxP().z);
 
-	HandleCudaError(cudaMemcpyToSymbol("gInvAaBbMin", &InvAaBbMin, sizeof(float3)));
-	HandleCudaError(cudaMemcpyToSymbol("gInvAaBbMax", &InvAaBbMax, sizeof(float3)));
+	HandleCudaError(cudaMemcpyToSymbol(gInvAaBbMin, &InvAaBbMin, sizeof(float3)));
+	HandleCudaError(cudaMemcpyToSymbol(gInvAaBbMax, &InvAaBbMax, sizeof(float3)));
 
 	const float IntensityMin		= pScene->m_IntensityRange.GetMin();
 	const float IntensityMax		= pScene->m_IntensityRange.GetMax();
 	const float IntensityRange		= pScene->m_IntensityRange.GetRange();
 	const float IntensityInvRange	= 1.0f / IntensityRange;
 
-	HandleCudaError(cudaMemcpyToSymbol("gIntensityMin", &IntensityMin, sizeof(float)));
-	HandleCudaError(cudaMemcpyToSymbol("gIntensityMax", &IntensityMax, sizeof(float)));
-	HandleCudaError(cudaMemcpyToSymbol("gIntensityRange", &IntensityRange, sizeof(float)));
-	HandleCudaError(cudaMemcpyToSymbol("gIntensityInvRange", &IntensityInvRange, sizeof(float)));
+	HandleCudaError(cudaMemcpyToSymbol(gIntensityMin, &IntensityMin, sizeof(float)));
+	HandleCudaError(cudaMemcpyToSymbol(gIntensityMax, &IntensityMax, sizeof(float)));
+	HandleCudaError(cudaMemcpyToSymbol(gIntensityRange, &IntensityRange, sizeof(float)));
+	HandleCudaError(cudaMemcpyToSymbol(gIntensityInvRange, &IntensityInvRange, sizeof(float)));
 
 	const float StepSize		= pScene->m_StepSizeFactor * pScene->m_GradientDelta;
 	const float StepSizeShadow	= pScene->m_StepSizeFactorShadow * pScene->m_GradientDelta;
 
-	HandleCudaError(cudaMemcpyToSymbol("gStepSize", &StepSize, sizeof(float)));
-	HandleCudaError(cudaMemcpyToSymbol("gStepSizeShadow", &StepSizeShadow, sizeof(float)));
+	HandleCudaError(cudaMemcpyToSymbol(gStepSize, &StepSize, sizeof(float)));
+	HandleCudaError(cudaMemcpyToSymbol(gStepSizeShadow, &StepSizeShadow, sizeof(float)));
 
 	const float DensityScale = pScene->m_DensityScale;
 
-	HandleCudaError(cudaMemcpyToSymbol("gDensityScale", &DensityScale, sizeof(float)));
+	HandleCudaError(cudaMemcpyToSymbol(gDensityScale, &DensityScale, sizeof(float)));
 	
 	const float GradientDelta		= 1.0f * pScene->m_GradientDelta;
 	const float InvGradientDelta	= 1.0f / GradientDelta;
@@ -358,51 +538,51 @@ void BindConstants(CScene* pScene)
 	const Vec3f GradientDeltaY(0.0f, GradientDelta, 0.0f);
 	const Vec3f GradientDeltaZ(0.0f, 0.0f, GradientDelta);
 	
-	HandleCudaError(cudaMemcpyToSymbol("gGradientDelta", &GradientDelta, sizeof(float)));
-	HandleCudaError(cudaMemcpyToSymbol("gInvGradientDelta", &InvGradientDelta, sizeof(float)));
-	HandleCudaError(cudaMemcpyToSymbol("gGradientDeltaX", &GradientDeltaX, sizeof(Vec3f)));
-	HandleCudaError(cudaMemcpyToSymbol("gGradientDeltaY", &GradientDeltaY, sizeof(Vec3f)));
-	HandleCudaError(cudaMemcpyToSymbol("gGradientDeltaZ", &GradientDeltaZ, sizeof(Vec3f)));
+	HandleCudaError(cudaMemcpyToSymbol(gGradientDelta, &GradientDelta, sizeof(float)));
+	HandleCudaError(cudaMemcpyToSymbol(gInvGradientDelta, &InvGradientDelta, sizeof(float)));
+	HandleCudaError(cudaMemcpyToSymbol(gGradientDeltaX, &GradientDeltaX, sizeof(Vec3f)));
+	HandleCudaError(cudaMemcpyToSymbol(gGradientDeltaY, &GradientDeltaY, sizeof(Vec3f)));
+	HandleCudaError(cudaMemcpyToSymbol(gGradientDeltaZ, &GradientDeltaZ, sizeof(Vec3f)));
 	
 	const int FilmWidth		= pScene->m_Camera.m_Film.GetWidth();
 	const int Filmheight	= pScene->m_Camera.m_Film.GetHeight();
 	const int FilmNoPixels	= pScene->m_Camera.m_Film.m_Resolution.GetNoElements();
 
-	HandleCudaError(cudaMemcpyToSymbol("gFilmWidth", &FilmWidth, sizeof(int)));
-	HandleCudaError(cudaMemcpyToSymbol("gFilmHeight", &Filmheight, sizeof(int)));
-	HandleCudaError(cudaMemcpyToSymbol("gFilmNoPixels", &FilmNoPixels, sizeof(int)));
+	HandleCudaError(cudaMemcpyToSymbol(gFilmWidth, &FilmWidth, sizeof(int)));
+	HandleCudaError(cudaMemcpyToSymbol(gFilmHeight, &Filmheight, sizeof(int)));
+	HandleCudaError(cudaMemcpyToSymbol(gFilmNoPixels, &FilmNoPixels, sizeof(int)));
 
 	const int FilterWidth = 1;
 
-	HandleCudaError(cudaMemcpyToSymbol("gFilterWidth", &FilterWidth, sizeof(int)));
+	HandleCudaError(cudaMemcpyToSymbol(gFilterWidth, &FilterWidth, sizeof(int)));
 
 	const float FilterWeights[10] = { 0.11411459588254977f, 0.08176668094332218f, 0.03008028089187349f, 0.01f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f };
 
-	HandleCudaError(cudaMemcpyToSymbol("gFilterWeights", &FilterWeights, 10 * sizeof(float)));
+	HandleCudaError(cudaMemcpyToSymbol(gFilterWeights, &FilterWeights, 10 * sizeof(float)));
 
 	const float Gamma		= pScene->m_Camera.m_Film.m_Gamma;
 	const float InvGamma	= 1.0f / Gamma;
 	const float Exposure	= pScene->m_Camera.m_Film.m_Exposure;
 	const float InvExposure	= 1.0f / Exposure;
 
-	HandleCudaError(cudaMemcpyToSymbol("gExposure", &Exposure, sizeof(float)));
-	HandleCudaError(cudaMemcpyToSymbol("gInvExposure", &InvExposure, sizeof(float)));
-	HandleCudaError(cudaMemcpyToSymbol("gGamma", &Gamma, sizeof(float)));
-	HandleCudaError(cudaMemcpyToSymbol("gInvGamma", &InvGamma, sizeof(float)));
+	HandleCudaError(cudaMemcpyToSymbol(gExposure, &Exposure, sizeof(float)));
+	HandleCudaError(cudaMemcpyToSymbol(gInvExposure, &InvExposure, sizeof(float)));
+	HandleCudaError(cudaMemcpyToSymbol(gGamma, &Gamma, sizeof(float)));
+	HandleCudaError(cudaMemcpyToSymbol(gInvGamma, &InvGamma, sizeof(float)));
 
-	HandleCudaError(cudaMemcpyToSymbol("gDenoiseEnabled", &pScene->m_DenoiseParams.m_Enabled, sizeof(bool)));
-	HandleCudaError(cudaMemcpyToSymbol("gDenoiseWindowRadius", &pScene->m_DenoiseParams.m_WindowRadius, sizeof(float)));
-	HandleCudaError(cudaMemcpyToSymbol("gDenoiseInvWindowArea", &pScene->m_DenoiseParams.m_InvWindowArea, sizeof(float)));
-	HandleCudaError(cudaMemcpyToSymbol("gDenoiseNoise", &pScene->m_DenoiseParams.m_Noise, sizeof(float)));
-	HandleCudaError(cudaMemcpyToSymbol("gDenoiseWeightThreshold", &pScene->m_DenoiseParams.m_WeightThreshold, sizeof(float)));
-	HandleCudaError(cudaMemcpyToSymbol("gDenoiseLerpThreshold", &pScene->m_DenoiseParams.m_LerpThreshold, sizeof(float)));
-	HandleCudaError(cudaMemcpyToSymbol("gDenoiseLerpC", &pScene->m_DenoiseParams.m_LerpC, sizeof(float)));
+	HandleCudaError(cudaMemcpyToSymbol(gDenoiseEnabled, &pScene->m_DenoiseParams.m_Enabled, sizeof(bool)));
+	HandleCudaError(cudaMemcpyToSymbol(gDenoiseWindowRadius, &pScene->m_DenoiseParams.m_WindowRadius, sizeof(float)));
+	HandleCudaError(cudaMemcpyToSymbol(gDenoiseInvWindowArea, &pScene->m_DenoiseParams.m_InvWindowArea, sizeof(float)));
+	HandleCudaError(cudaMemcpyToSymbol(gDenoiseNoise, &pScene->m_DenoiseParams.m_Noise, sizeof(float)));
+	HandleCudaError(cudaMemcpyToSymbol(gDenoiseWeightThreshold, &pScene->m_DenoiseParams.m_WeightThreshold, sizeof(float)));
+	HandleCudaError(cudaMemcpyToSymbol(gDenoiseLerpThreshold, &pScene->m_DenoiseParams.m_LerpThreshold, sizeof(float)));
+	HandleCudaError(cudaMemcpyToSymbol(gDenoiseLerpC, &pScene->m_DenoiseParams.m_LerpC, sizeof(float)));
 
 	const float NoIterations	= pScene->GetNoIterations();
-	const float InvNoIterations = 1.0f / __max(1.0f, NoIterations);
+	const float InvNoIterations = 1.0f / std::max(1.0f, NoIterations);
 
-	HandleCudaError(cudaMemcpyToSymbol("gNoIterations", &NoIterations, sizeof(float)));
-	HandleCudaError(cudaMemcpyToSymbol("gInvNoIterations", &InvNoIterations, sizeof(float)));
+	HandleCudaError(cudaMemcpyToSymbol(gNoIterations, &NoIterations, sizeof(float)));
+	HandleCudaError(cudaMemcpyToSymbol(gInvNoIterations, &InvNoIterations, sizeof(float)));
 }
 
 void Render(const int& Type, CScene& Scene, CTiming& RenderImage, CTiming& BlurImage, CTiming& PostProcessImage, CTiming& DenoiseImage)
@@ -429,13 +609,13 @@ void Render(const int& Type, CScene& Scene, CTiming& RenderImage, CTiming& BlurI
 	{
 		case 0:
 		{
-			SingleScattering(&Scene, pDevScene, pDevView);
+			SingleScattering(&Scene, pDevScene, pDevView, RGBA);
 			break;
 		}
 
 		case 1:
 		{
-//			MultipleScattering(&Scene, pDevScene);
+			MultipleScattering(&Scene, pDevScene, pDevView, RGBA);
 			break;
 		}
 	}

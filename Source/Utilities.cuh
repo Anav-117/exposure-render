@@ -15,6 +15,13 @@
 
 #include <cuda_runtime.h>
 
+DEV float Rx, Ry, Rz;
+DEV float Rox, Roy, Roz;
+DEV float RSx, RSy, RSz;
+DEV float DensityScale;
+DEV float isRGBA, SegmentAvailable;
+DEV float weight[7] = {0.006, 0.061, 0.242, 0.383, 0.242, 0.061, 0.006};
+
 DEV inline Vec3f ToVec3f(const float3& V)
 {
 	return Vec3f(V.x, V.y, V.z);
@@ -22,20 +29,110 @@ DEV inline Vec3f ToVec3f(const float3& V)
 
 DEV float GetNormalizedIntensity(const Vec3f& P)
 {
-	const float Intensity = ((float)SHRT_MAX * tex3D(gTexDensity, P.x * gInvAaBbMax.x, P.y * gInvAaBbMax.y, P.z * gInvAaBbMax.z));
-
-	return (Intensity - gIntensityMin) * gIntensityInvRange;
+	if (isRGBA) {
+		float4 sample = tex3D(gTexDensityRGBA, P.x * gInvAaBbMax.x, P.y * gInvAaBbMax.y, P.z * gInvAaBbMax.z);
+		const float Intensity = ((float)SHRT_MAX * ((sample.x + sample.y + sample.z)/3.0f));
+		//printf("%f\n", (float)tex3D(gTexDensity2, P.x, P.y, P.z));
+		return (Intensity - gIntensityMin) * gIntensityInvRange;
+	}
+	else {
+		const float Intensity = ((float)SHRT_MAX * tex3D(gTexDensity, P.x * gInvAaBbMax.x, P.y * gInvAaBbMax.y, P.z * gInvAaBbMax.z));
+		return (Intensity - gIntensityMin) * gIntensityInvRange;
+	}
 }
 
-DEV float GetOpacity(const float& NormalizedIntensity)
-{
-	return tex1D(gTexOpacity, NormalizedIntensity);
+DEV void SetResolution(float gRx, float gRy, float gRz, float gRSx, float gRSy, float gRSz) {
+	Rx = gRx;
+	Ry = gRy;
+	Rz = gRz;
+	RSx = gRSx;
+	RSy = gRSy;
+	RSz = gRSz;
+	Rox = 1.0f;
+	Roy = 1.0f;
+	Roz = 1.0f;
 }
 
-DEV CColorRgbHdr GetDiffuse(const float& NormalizedIntensity)
+DEV void SetSegmentAvailable(bool gSegmentAvailable) {
+	SegmentAvailable = gSegmentAvailable;
+}
+
+DEV void SetRGBA(bool gisRGBA) {
+	isRGBA = gisRGBA;
+}
+
+DEV float GetDensityScale () {
+	return DensityScale;
+}
+
+DEV float GetOpacity(const float& NormalizedIntensity, float3 P)
 {
-	float4 Diffuse = tex1D(gTexDiffuse, NormalizedIntensity);
-	return CColorRgbHdr(Diffuse.x, Diffuse.y, Diffuse.z);
+	DensityScale = gDensityScale;
+	if (isRGBA) {
+		uchar4 BG = tex3D(gTexOpacityRGBA, (P.x*1.37f)*Rx, (P.y*1.11f)*Ry, (P.z)*Rz); 
+		float3 Pn;
+		Pn.x = P.x*1.37f;
+		Pn.y = P.y*1.1f;
+		Pn.z = P.z;
+		//printf("DIFF - %f\n", 1.0f - P.y);
+		if (SegmentAvailable) {
+			if ((float)(BG.w) == 2.0f) {
+				return 0.0f;
+			}
+			
+			float op = 0.0f;
+
+			for(int i=-3; i<4; i++) {
+				short SegmentColor = tex3D(gTexOpacityRGB, Pn.x*Rx + (i*1.0f), Pn.y*Ry, Pn.z*Rz);
+				op = op + (tex1D(gTexSelectiveOpacity, (float)(SegmentColor - 1.0f)) * weight[i+3]);
+			}
+			for(int i=-3; i<4; i++) {
+				short SegmentColor = tex3D(gTexOpacityRGB, Pn.x*Rx, Pn.y*Ry + (i*1.0f), Pn.z*Rz);
+				op = op + (tex1D(gTexSelectiveOpacity, (float)(SegmentColor - 1.0f)) * weight[i+3]);
+			}
+			for(int i=-3; i<4; i++) {
+				short SegmentColor = tex3D(gTexOpacityRGB, Pn.x*Rx, Pn.y*Ry, Pn.z*Rz + (i*1.0f));
+				op = op + (tex1D(gTexSelectiveOpacity, (float)(SegmentColor - 1.0f)) * weight[i+3]);
+			}
+
+			//printf("OP - %f\n", op);
+
+			//op = op/15.0f;
+
+			//short SegmentColor = tex3D(gTexOpacityRGB, Pn.x*Rx, Pn.y*Ry, Pn.z*Rz);
+
+			//float op = tex1D(gTexSelectiveOpacity, (float)(SegmentColor) - 1.0f);
+			
+			return (op);
+		}
+		else {
+			DensityScale = gDensityScale;
+			return 1.0f;
+		}
+	}
+	else {
+		DensityScale = gDensityScale;
+		return tex1D(gTexOpacity, NormalizedIntensity);
+	}
+}
+
+DEV CColorRgbHdr GetDiffuse(const float& NormalizedIntensity, Vec3f P)
+{
+	float3 Pn;
+	Pn.x = P.x*1.37f;
+	Pn.y = P.y*1.1f;
+	Pn.z = P.z;
+	if (isRGBA) {
+		uchar4 Diffuse = tex3D(gTexDiffuseRGBA, Pn.x*Rx, Pn.y*Ry, Pn.z*Rz);
+		//printf("COLOR - %f : %f : %f\n", (float)Diffuse.x, (float)Diffuse.y, (float)Diffuse.z);
+		return CColorRgbHdr((float)Diffuse.x/255.0f, (float)Diffuse.y/255.0f, (float)Diffuse.z/255.0f);
+		//return CColorRgbHdr(0, 255, 0);
+	}
+	else  {
+		float4 Diffuse = tex1D(gTexDiffuse, NormalizedIntensity);
+		//printf("COLOR - %f : %f : %f\n", (float)Diffuse.x, (float)Diffuse.y, (float)Diffuse.z);
+		return CColorRgbHdr((float)Diffuse.x, (float)Diffuse.y, (float)Diffuse.z);
+	}
 }
 
 DEV CColorRgbHdr GetSpecular(const float& NormalizedIntensity)
@@ -62,6 +159,8 @@ DEV inline Vec3f NormalizedGradient(const Vec3f& P)
 	Gradient.x = (GetNormalizedIntensity(P + ToVec3f(gGradientDeltaX)) - GetNormalizedIntensity(P - ToVec3f(gGradientDeltaX))) * gInvGradientDelta;
 	Gradient.y = (GetNormalizedIntensity(P + ToVec3f(gGradientDeltaY)) - GetNormalizedIntensity(P - ToVec3f(gGradientDeltaY))) * gInvGradientDelta;
 	Gradient.z = (GetNormalizedIntensity(P + ToVec3f(gGradientDeltaZ)) - GetNormalizedIntensity(P - ToVec3f(gGradientDeltaZ))) * gInvGradientDelta;
+
+	//printf("%f : %f\n", GetNormalizedIntensity(P + ToVec3f(gGradientDeltaX)), GetNormalizedIntensity(P - ToVec3f(gGradientDeltaX)));
 
 	return Normalize(Gradient);
 }

@@ -28,8 +28,8 @@ class QCamera : public QPresetXML
 public:
 	QCamera(QObject* pParent = NULL);
 	virtual ~QCamera(void);
-	QCamera::QCamera(const QCamera& Other);
-	QCamera& QCamera::operator=(const QCamera& Other);
+	QCamera(const QCamera& Other);
+	QCamera& operator=(const QCamera& Other);
 
 	QFilm&			GetFilm(void);
 	void			SetFilm(const QFilm& Film);
@@ -47,7 +47,11 @@ public:
 	void			SetUp(const Vec3f& Up);
 	void			ReadXML(QDomElement& Parent);
 	QDomElement		WriteXML(QDomDocument& DOM, QDomElement& Parent);
-	static QCamera	Default(void);
+	static QCamera		Default(void);	
+	bool			CycleCameraParams(void);
+	void			LoadCameraPoses(string);
+	string			GetPoseFileDir(void);
+	void			SetResolution(Vec3f);
 
 public slots:
 	void OnFilmChanged(void);
@@ -66,6 +70,11 @@ private:
 	Vec3f			m_From;
 	Vec3f			m_Target;
 	Vec3f			m_Up;
+	vector<Vec3f>		CameraFroms;
+	vector<Vec3f> 		CameraUps;
+	string 			PoseFileDir;
+	Vec3f 			Resolution;
+	int 			poseIndex;
 };
 
 // Camera singleton

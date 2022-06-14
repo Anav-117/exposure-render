@@ -15,8 +15,12 @@
 
 #include "Transport.cuh"
 
-KERNEL void KrnlSingleScattering(CScene* pScene, CCudaView* pView)
+KERNEL void KrnlSingleScattering(CScene* pScene, CCudaView* pView, bool RGBA)
 {
+	SetResolution((float)pScene->m_Resolution.GetResX(), (float)pScene->m_Resolution.GetResY(), (float)pScene->m_Resolution.GetResZ(), (float)pScene->m_ResolutionSegment.GetResX(), (float)pScene->m_ResolutionSegment.GetResY(), (float)pScene->m_ResolutionSegment.GetResZ());
+	SetSegmentAvailable(pScene->m_SegmentAvailable);
+	SetRGBA(pScene->m_RGBA);
+
 	const int X		= blockIdx.x * blockDim.x + threadIdx.x;
 	const int Y		= blockIdx.y * blockDim.y + threadIdx.y;
 
@@ -90,12 +94,12 @@ KERNEL void KrnlSingleScattering(CScene* pScene, CCudaView* pView)
 	pView->m_FrameEstimateXyza.Set(CColorXyza(Lv.c[0], Lv.c[1], Lv.c[2]), X, Y);
 }
 
-void SingleScattering(CScene* pScene, CScene* pDevScene, CCudaView* pView)
+void SingleScattering(CScene* pScene, CScene* pDevScene, CCudaView* pView, bool RGBA)
 {
 	const dim3 KernelBlock(KRNL_SS_BLOCK_W, KRNL_SS_BLOCK_H);
 	const dim3 KernelGrid((int)ceilf((float)pScene->m_Camera.m_Film.m_Resolution.GetResX() / (float)KernelBlock.x), (int)ceilf((float)pScene->m_Camera.m_Film.m_Resolution.GetResY() / (float)KernelBlock.y));
 	
-	KrnlSingleScattering<<<KernelGrid, KernelBlock>>>(pDevScene, pView);
+	KrnlSingleScattering<<<KernelGrid, KernelBlock>>>(pDevScene, pView, RGBA);
 	cudaThreadSynchronize();
 	HandleCudaKernelError(cudaGetLastError(), "Single Scattering");
 }
