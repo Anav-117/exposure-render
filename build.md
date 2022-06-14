@@ -20,7 +20,7 @@ make
 ```
 
 ## Reference  
-* [An interactive photo-realistic volume rendering framework](http://graphics.tudelft.nl/Publications/kroes_exposure_2012)  
+* [An interactive photo-realistic volume rendering framework](https://journals.plos.org/plosone/article?id=10.1371/journal.pone.0038586)  
 T. Kroes, F. H. Post, C. P. Botha
-* [Visibility sweeps for joint-hierarchical importance sampling of direct lighting for stochastic volume rendering](http://graphics.tudelft.nl/Publications-new/2015/KEE1)  
+* [Visibility sweeps for joint-hierarchical importance sampling of direct lighting for stochastic volume rendering](http://graphicsinterface.org/proceedings/gi2015/gi2015-13/)  
 T. Kroes, M. Eisemann, E. Eisemann
