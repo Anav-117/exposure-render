@@ -102,6 +102,7 @@ SET(ExposureRenderSources
 	SelectiveOpacityDockWidget.cpp
 	SelectiveOpacityWidget.cpp
 	MeshRenderingWidget.cpp
+	MeshRendering.cpp
 	MeshRenderingDockWidget.cpp
 	SelectiveOpacity.cpp
 
@@ -194,6 +195,7 @@ SET(ExposureRenderHeaders
 	SelectiveOpacityDockWidget.h
 	SelectiveOpacityWidget.h
 	MeshRenderingWidget.h
+	MeshRendering.h
 	MeshRenderingDockWidget.h
 	SelectiveOpacity.h
 
@@ -292,6 +294,7 @@ SET(ExposureRenderMocHeaders
 	SelectiveOpacityDockWidget.h
 	SelectiveOpacityWidget.h
 	MeshRenderingWidget.h
+	MeshRendering.h
 	MeshRenderingDockWidget.h
 	SelectiveOpacity.h
 
@@ -474,7 +477,9 @@ SET(SelectiveRenderingSources
 	SelectiveOpacityWidget.h
 	SelectiveOpacityWidget.cpp
 	MeshRenderingWidget.h
+	MeshRendering.h
 	MeshRenderingWidget.cpp
+	MeshRendering.cpp
 	MeshRenderingDockWidget.h
 	MeshRenderingDockWidget.cpp
 	SelectiveOpacity.h

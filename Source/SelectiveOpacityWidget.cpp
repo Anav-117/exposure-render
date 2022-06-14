@@ -4,6 +4,7 @@
 #include <vector>
 #include <algorithm>
 #include <iostream>
+#include "MeshRendering.h"
 
 #define NUM_SEGMENTS 3
 
@@ -25,7 +26,7 @@ QSelectiveOpacityWidget::QSelectiveOpacityWidget(QWidget* pParent) :
     vector<string> temp;
     vector<string> temp2;
 
-    File.open("./OutlinedStructure.csv", ios::in);
+    File.open("../Source/OutlinedStructure.csv", ios::in);
     string rawline;
     string line;
 
@@ -181,6 +182,7 @@ void QSelectiveOpacityWidget::OnMajorChanged(int index) {
     MajorChanged = true;
     SubChanged = MinorChanged = false;
     Index = index;
+    gMeshRendering.SetMajorClass(MajorClass[Index].text(0).toStdString());
 }
 
 void QSelectiveOpacityWidget::OnMinorChanged(int index) {
@@ -231,7 +233,6 @@ void QSelectiveOpacityWidget::OnSelection(QTreeWidgetItem* Item, int col) {
 void QSelectiveOpacityWidget::OnButtonClick() {
     if (SubChanged) {
         OpacityArray[Index][1] = (float)m_OpacitySpinnerWidget.value();
-        //std::cout<<"CHANGED "<<OpacityArray[Index][1]<<"\n";
         ResetTex();
     }
     if (MinorChanged) {

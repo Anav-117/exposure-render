@@ -27,6 +27,18 @@ DEV inline Vec3f ToVec3f(const float3& V)
 	return Vec3f(V.x, V.y, V.z);
 }
 
+DEV float pi;
+DEV const int samples = 3;
+DEV float sigma;
+
+DEV float pow3(float p) {
+	return p*p*p;
+}
+
+DEV float gaussian(float x, float y, float z) {
+    return 1.0 / sqrt(pow3(2.0 * pi * (sigma*sigma))) * exp(-(((x*x) + (y*y) + (z*z)) / (2.0 * (sigma*sigma))));
+}
+
 DEV float GetNormalizedIntensity(const Vec3f& P)
 {
 	if (isRGBA) {
@@ -51,6 +63,9 @@ DEV void SetResolution(float gRx, float gRy, float gRz, float gRSx, float gRSy, 
 	Rox = 1.0f;
 	Roy = 1.0f;
 	Roz = 1.0f;
+
+	pi = atan(1.0) * 4.0;
+	sigma = float(samples) * 0.25;
 }
 
 DEV void SetSegmentAvailable(bool gSegmentAvailable) {
@@ -81,23 +96,22 @@ DEV float GetOpacity(const float& NormalizedIntensity, float3 P)
 			}
 			
 			float op = 0.0f;
+			float accum = 0.0f;
 
-			for(int i=-3; i<4; i++) {
-				short SegmentColor = tex3D(gTexOpacityRGB, Pn.x*Rx + (i*1.0f), Pn.y*Ry, Pn.z*Rz);
-				op = op + (tex1D(gTexSelectiveOpacity, (float)(SegmentColor - 1.0f)) * weight[i+3]);
-			}
-			for(int i=-3; i<4; i++) {
-				short SegmentColor = tex3D(gTexOpacityRGB, Pn.x*Rx, Pn.y*Ry + (i*1.0f), Pn.z*Rz);
-				op = op + (tex1D(gTexSelectiveOpacity, (float)(SegmentColor - 1.0f)) * weight[i+3]);
-			}
-			for(int i=-3; i<4; i++) {
-				short SegmentColor = tex3D(gTexOpacityRGB, Pn.x*Rx, Pn.y*Ry, Pn.z*Rz + (i*1.0f));
-				op = op + (tex1D(gTexSelectiveOpacity, (float)(SegmentColor - 1.0f)) * weight[i+3]);
+			for (int x = -samples / 2; x < samples / 2; ++x) {
+				for (int y = -samples / 2; y < samples / 2; ++y) {
+					for (int z = -samples / 2; z < samples / 2; ++z) {
+						float weight = gaussian((x), (y), (z));
+						short SegmentColor = tex3D(gTexOpacityRGB, Pn.x*Rx + (x), Pn.y*Ry + (y), Pn.z*Rz + (z));
+						op = op + (tex1D(gTexSelectiveOpacity, (float)(SegmentColor - 1.0f)) * weight);		
+						accum += weight;
+					}
+				}
 			}
 
 			//printf("OP - %f\n", op);
 
-			//op = op/15.0f;
+			op = op/accum;
 
 			//short SegmentColor = tex3D(gTexOpacityRGB, Pn.x*Rx, Pn.y*Ry, Pn.z*Rz);
 
