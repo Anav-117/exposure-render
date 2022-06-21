@@ -26,7 +26,7 @@ QSelectiveOpacityWidget::QSelectiveOpacityWidget(QWidget* pParent) :
     vector<string> temp;
     vector<string> temp2;
 
-    File.open("../Source/OutlinedStructure.csv", ios::in);
+    File.open("./OutlinedStructure.csv", ios::in);
     string rawline;
     string line;
 
@@ -148,6 +148,7 @@ QSelectiveOpacityWidget::QSelectiveOpacityWidget(QWidget* pParent) :
     m_Button.setText(QString::fromStdString("Refresh"));
 
     QObject::connect(&m_Button, SIGNAL(clicked()), this, SLOT(OnButtonClick()));    
+    QObject::connect(&gMeshRendering, SIGNAL(MajorClassChanged()), this, SLOT(OnMajorClassChanged(void)));
 
     max = OpacityArray[0][1];
     for(int i=1; i<OpacityArray.size(); i++) {
@@ -172,6 +173,44 @@ bool operator==(QTreeWidgetItem A, QTreeWidgetItem* B) {
     return A.text(0) == B->text(0);
 }
 
+void QSelectiveOpacityWidget::OnMajorClassChanged() {
+    string Name = gMeshRendering.GetMajorClass();
+
+    for (int i=0; i<MajorClassSize; i++) {
+        if (Name == MajorClass[i].text(0).toStdString()) {
+            int NumChildren = 0;
+            for (int j=0; j<i; j++) {
+                NumChildren += MajorClass[j].childCount();
+            }
+            for(int j=NumChildren; j<(NumChildren+MajorClass[i].childCount()); j++) {
+                int NumGChildren = 0;
+                for (int k=0; k<j; k++) {
+                    NumGChildren += MinorClass[k].childCount();
+                }
+                for(int k=NumGChildren; k<(NumGChildren+MinorClass[j].childCount()); k++) {
+                    OpacityArray[k][1] = 1.0f;
+                }
+            }
+        }
+        else {
+            int NumChildren = 0;
+            for (int j=0; j<i; j++) {
+                NumChildren += MajorClass[j].childCount();
+            }
+            for(int j=NumChildren; j<(NumChildren+MajorClass[i].childCount()); j++) {
+                int NumGChildren = 0;
+                for (int k=0; k<j; k++) {
+                    NumGChildren += MinorClass[k].childCount();
+                }
+                for(int k=NumGChildren; k<(NumGChildren+MinorClass[j].childCount()); k++) {
+                    OpacityArray[k][1] = 0.0f;
+                }
+            }
+        }
+        ResetTex();
+    }
+}
+
 void QSelectiveOpacityWidget::OnRenderBegin(void)
 {
     //m_RenderWindow.show();
@@ -182,7 +221,7 @@ void QSelectiveOpacityWidget::OnMajorChanged(int index) {
     MajorChanged = true;
     SubChanged = MinorChanged = false;
     Index = index;
-    gMeshRendering.SetMajorClass(MajorClass[Index].text(0).toStdString());
+    //gMeshRendering.SetMajorClass(MajorClass[Index].text(0).toStdString());
 }
 
 void QSelectiveOpacityWidget::OnMinorChanged(int index) {

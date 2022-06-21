@@ -198,6 +198,7 @@ SET(ExposureRenderHeaders
 	MeshRendering.h
 	MeshRenderingDockWidget.h
 	SelectiveOpacity.h
+	MouseInteractorHighLightActor.h
 
 	# Lighting
 	LightWidget.h
@@ -484,6 +485,7 @@ SET(SelectiveRenderingSources
 	MeshRenderingDockWidget.cpp
 	SelectiveOpacity.h
 	SelectiveOpacity.cpp
+	MouseInteractorHighLightActor.h
 )
 
 #Make the Selective Rendering group

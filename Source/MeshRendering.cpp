@@ -18,3 +18,12 @@ void QMeshRendering::SetMajorClass(string Name) {
 string QMeshRendering::GetMajorClass() {
     return MajorClass;
 }
+
+void QMeshRendering::SetScalarRange(double* Range) {
+    ScalarRange = Range;
+    emit ScalarRangeChanged();
+}
+
+double* QMeshRendering::GetScalarRange() {
+    return ScalarRange;
+}

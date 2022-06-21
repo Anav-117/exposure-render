@@ -1,6 +1,7 @@
 #include "Stable.h"
 #include <QVTKOpenGLNativeWidget.h>
 #include "MeshRendering.h"
+#include "MouseInteractorHighLightActor.h"
 
 #pragma once
 
@@ -15,6 +16,8 @@ public:
 
 public slots:
 	void OnRenderBegin(void);
-	void OnMajorClassChanged(void);
-	
+	void OnScalarRangeChanged(void);
+
+private:
+  vtkSmartPointer<vtkInteractorStyleTrackballCamera>  ClassPicker;
 };

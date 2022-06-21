@@ -14,6 +14,7 @@ public:
 	void ResetTex();
 
 public slots:
+	void OnMajorClassChanged();
 	void OnRenderBegin(void);
 	void OnSetOpacity(double Opacity);
 	void OnMajorChanged(int);
