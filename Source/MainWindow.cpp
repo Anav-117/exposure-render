@@ -138,19 +138,19 @@ void CMainWindow::SetupDockingWidgets()
 	// Lighting dock widget
 	m_LightingDockWidget.setEnabled(false);
     m_LightingDockWidget.setAllowedAreas(Qt::AllDockWidgetAreas);
-    addDockWidget(Qt::RightDockWidgetArea, &m_LightingDockWidget);
+    addDockWidget(Qt::LeftDockWidgetArea, &m_LightingDockWidget);
     m_pViewMenu->addAction(m_LightingDockWidget.toggleViewAction());
 
 	// Selective Opacity dock widget
 	m_SelectiveOpacityDockWidget.setEnabled(false);
     m_SelectiveOpacityDockWidget.setAllowedAreas(Qt::AllDockWidgetAreas);
-    addDockWidget(Qt::RightDockWidgetArea, &m_SelectiveOpacityDockWidget);
+    addDockWidget(Qt::LeftDockWidgetArea, &m_SelectiveOpacityDockWidget);
     m_pViewMenu->addAction(m_SelectiveOpacityDockWidget.toggleViewAction());
 
 	// Mesh Rendering dock widget
 	m_MeshRenderingDockWidget.setEnabled(false);
     m_MeshRenderingDockWidget.setAllowedAreas(Qt::AllDockWidgetAreas);
-    addDockWidget(Qt::RightDockWidgetArea, &m_MeshRenderingDockWidget);
+    addDockWidget(Qt::LeftDockWidgetArea, &m_MeshRenderingDockWidget);
     m_pViewMenu->addAction(m_MeshRenderingDockWidget.toggleViewAction());
 
 	// Appearance dock widget
