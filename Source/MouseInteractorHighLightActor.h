@@ -54,7 +54,7 @@ public:
           colors->GetColor3d("Red").GetData());
       this->LastPickedActor->GetProperty()->SetDiffuse(1.0);
       this->LastPickedActor->GetProperty()->SetSpecular(0.0);
-      this->LastPickedActor->GetProperty()->EdgeVisibilityOn();
+      //this->LastPickedActor->GetProperty()->EdgeVisibilityOn();
       gMeshRendering.SetScalarRange(this->LastPickedActor->GetMapper()->GetScalarRange());
       //std::cout<<"THIS - "<<this->LastPickedActor->GetMapper()->GetScalarRange()<<"\n";
     }

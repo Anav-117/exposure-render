@@ -144,6 +144,7 @@ QSelectiveOpacityWidget::QSelectiveOpacityWidget(QWidget* pParent) :
     QObject::connect(&m_OpacitySlider, SIGNAL(valueChanged(double)), &m_OpacitySpinnerWidget, SLOT(setValue(double)));
 	QObject::connect(&m_OpacitySpinnerWidget, SIGNAL(valueChanged(double)), &m_OpacitySlider, SLOT(setValue(double)));
 	QObject::connect(&m_OpacitySlider, SIGNAL(valueChanged(double)), this, SLOT(OnSetOpacity(double)));
+    QObject::connect(&gStatus, SIGNAL(RenderBegin()), this, SLOT(OnRenderBegin()));
 
     m_Button.setText(QString::fromStdString("Refresh"));
 
@@ -158,16 +159,22 @@ QSelectiveOpacityWidget::QSelectiveOpacityWidget(QWidget* pParent) :
     }
 
     Buffer = new float[max];
-
+    
     m_MainLayout.addWidget(&m_Tree, 0, 0);
     m_MainLayout.addWidget(label, 1, 0);
     m_MainLayout.addWidget(&m_OpacitySlider, 2, 0);
     m_MainLayout.addWidget(&m_OpacitySpinnerWidget, 3, 0);
     m_MainLayout.addWidget(&m_Button, 4, 0);
 
+    delete label;
 }
 
-QSelectiveOpacityWidget::~QSelectiveOpacityWidget() {}
+QSelectiveOpacityWidget::~QSelectiveOpacityWidget() {
+    delete Buffer;
+    delete MajorClass;
+    delete MinorClass;
+    delete SubClass;
+}
 
 bool operator==(QTreeWidgetItem A, QTreeWidgetItem* B) {
     return A.text(0) == B->text(0);
@@ -213,8 +220,7 @@ void QSelectiveOpacityWidget::OnMajorClassChanged() {
 
 void QSelectiveOpacityWidget::OnRenderBegin(void)
 {
-    //m_RenderWindow.show();
-    //ResetTex();
+    ResetTex();
 }
 
 void QSelectiveOpacityWidget::OnMajorChanged(int index) {

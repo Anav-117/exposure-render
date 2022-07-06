@@ -84,10 +84,10 @@ DEV float GetOpacity(const float& NormalizedIntensity, float3 P)
 {
 	DensityScale = gDensityScale;
 	if (isRGBA) {
-		uchar4 BG = tex3D(gTexOpacityRGBA, (P.x*1.37f)*Rx, (P.y*1.11f)*Ry, (P.z)*Rz); 
+		uchar4 BG = tex3D(gTexOpacityRGBA, (P.x*(Rz/Rx))*Rx, (P.y*(Rz/Ry))*Ry, (P.z)*Rz); 
 		float3 Pn;
-		Pn.x = P.x*1.37f;
-		Pn.y = P.y*1.1f;
+		Pn.x = P.x*(Rz/Rx);
+		Pn.y = P.y*(Rz/Ry);
 		Pn.z = P.z;
 		//printf("DIFF - %f\n", 1.0f - P.y);
 		if (SegmentAvailable) {
@@ -95,27 +95,30 @@ DEV float GetOpacity(const float& NormalizedIntensity, float3 P)
 				return 0.0f;
 			}
 			
-			float op = 0.0f;
-			float accum = 0.0f;
+			//float op = 0.0f;
+			//float accum = 0.0f;
 
-			for (int x = -samples / 2; x < samples / 2; ++x) {
-				for (int y = -samples / 2; y < samples / 2; ++y) {
-					for (int z = -samples / 2; z < samples / 2; ++z) {
-						float weight = gaussian((x), (y), (z));
-						short SegmentColor = tex3D(gTexOpacityRGB, Pn.x*Rx + (x), Pn.y*Ry + (y), Pn.z*Rz + (z));
-						op = op + (tex1D(gTexSelectiveOpacity, (float)(SegmentColor - 1.0f)) * weight);		
-						accum += weight;
-					}
-				}
-			}
+			//for (int x = -samples / 2; x < samples / 2; ++x) {
+			//	for (int y = -samples / 2; y < samples / 2; ++y) {
+			//		for (int z = -samples / 2; z < samples / 2; ++z) {
+			//			float weight = gaussian((x), (y), (z));
+			//			short SegmentColor = tex3D(gTexOpacityRGB, Pn.x*Rx + (x), Pn.y*Ry + (y), Pn.z*Rz + (z));
+			//			op = op + (tex1D(gTexSelectiveOpacity, (float)(SegmentColor - 1.0f)) * weight);		
+			//			accum += weight;
+			//		}
+			//	}
+			//}
 
 			//printf("OP - %f\n", op);
 
-			op = op/accum;
+			//op = op/accum;
 
-			//short SegmentColor = tex3D(gTexOpacityRGB, Pn.x*Rx, Pn.y*Ry, Pn.z*Rz);
-
-			//float op = tex1D(gTexSelectiveOpacity, (float)(SegmentColor) - 1.0f);
+			short SegmentColor = tex3D(gTexOpacityRGB, Pn.x*Rx, Pn.y*Ry, Pn.z*Rz);
+			if (SegmentColor == 0) {
+				SegmentColor = tex3D(gTexOpacitySkin, Pn.x*Rx, Pn.y*Ry, Pn.z*Rz);
+			}
+			
+			float op = tex1D(gTexSelectiveOpacity, (float)(SegmentColor) - 1.0f);
 			
 			return (op);
 		}
@@ -133,8 +136,8 @@ DEV float GetOpacity(const float& NormalizedIntensity, float3 P)
 DEV CColorRgbHdr GetDiffuse(const float& NormalizedIntensity, Vec3f P)
 {
 	float3 Pn;
-	Pn.x = P.x*1.37f;
-	Pn.y = P.y*1.1f;
+	Pn.x = P.x*(Rz/Rx);
+	Pn.y = P.y*(Rz/Ry);
 	Pn.z = P.z;
 	if (isRGBA) {
 		uchar4 Diffuse = tex3D(gTexDiffuseRGBA, Pn.x*Rx, Pn.y*Ry, Pn.z*Rz);
