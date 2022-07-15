@@ -18,25 +18,46 @@
 #include <QVTKInteractor.h>
 #include <vtkNamedColors.h>
 #include <array>
+#include <fstream>
+#include <string>
 
 void SaveMeshFile(int startValue, int endValue, string fileName);
 
-vector<string> FileNames = {"Skeletal system", "Lymphoid system", "Nervous system", "Sensory organs", "The Integument", "Articular system", "Muscular system", "Alimentary system", "Respiratory system", "Urinary system", "Genital system", "Endocrine glands", "Cardiovascular system"};
+vector<string> FileNames;// {"Skeletal system", "Lymphoid system", "Nervous system", "Sensory organs", "The Integument", "Articular system", "Muscular system", "Alimentary system", "Respiratory system", "Urinary system", "Genital system", "Endocrine glands", "Cardiovascular system"};
 vector<std::array<unsigned char, 4>> colors = {{47, 79, 79, 255}, {139, 69, 19, 255}, {0, 128, 0, 255}, {75, 0, 130, 255}, {128, 0, 0, 255}, {128, 128, 0, 255}, {0, 128, 128, 255}, {0, 0, 128, 255}, {238, 232, 170, 255}, {100, 149, 237, 255}, {255, 105, 180, 255}, {0, 255, 0, 255}, {128, 0, 128, 255}};
 vector<vtkSmartPointer<vtkSTLReader>> polyReader;
 vector<vtkSmartPointer<vtkPolyDataMapper>> Mapper;
 vector<vtkSmartPointer<vtkActor>> surface;
 vtkSmartPointer<vtkRenderer> renderer = vtkRenderer::New();
+int NumSegments;
 
 QMeshRenderingWidget::QMeshRenderingWidget(QWidget* pParent) :
-	QVTKOpenGLNativeWidget(pParent)    
+	QVTKOpenGLNativeWidget(pParent),
+	m_Layout(), 
+	m_DeleteButton(),
+	m_ResetButton()
 {
-	// for (int i=0; i<13; i++) {
-	// 	string dir = "../MajorClassMeshes/";
-	// 	string ext = ".stl";
-	// 	dir = dir + FileNames[i] + ext;
-	// 	SaveMeshFile(2000 * (i+1), 2000 * (i+2), dir);
-	// }
+	m_Layout.setAlignment(Qt::AlignBottom);
+	setLayout(&m_Layout);
+
+	m_DeleteButton.setText(QString::fromStdString("Delete"));
+	m_ResetButton.setText(QString::fromStdString("Reset"));
+
+	QObject::connect(&m_DeleteButton, SIGNAL(clicked()), this, SLOT(OnDelete()));
+	QObject::connect(&m_ResetButton, SIGNAL(clicked()), this, SLOT(OnReset()));
+
+	fstream Names;
+	Names.open("../MajorClassMeshes/ClassNames.txt", ios::in);
+
+	string rawline;
+	NumSegments=0;
+	while(getline(Names, rawline)) {
+		FileNames.push_back(rawline);
+		NumSegments++;
+	}
+
+	Names.close();
+
 	vtkSmartPointer<vtkNamedColors> Colors = vtkSmartPointer<vtkNamedColors>::New();
 
 	for (int i=0; i<13; i++) {
@@ -49,20 +70,31 @@ QMeshRenderingWidget::QMeshRenderingWidget(QWidget* pParent) :
 	string dir = "../MajorClassMeshes/";
 	string ext = ".stl";
 
-	for (int i=0; i<13; i++) {
+	for (int i=0; i<NumSegments; i++) {
+		if (i == 1 || i==9 || i==10) 
+			continue;
 		polyReader[i]->SetFileName((dir+FileNames[i]+ext).c_str());
 		polyReader[i]->Update();
 		Mapper[i]->SetInputConnection(polyReader[i]->GetOutputPort());
 		Mapper[i]->ScalarVisibilityOff();
 		surface[i]->SetMapper(Mapper[i]);
 		surface[i]->GetProperty()->SetColor(Colors->GetColor3d(to_string(i)).GetData());
-		if (i == 4) {
-			surface[i]->GetProperty()->SetOpacity(0);
-		}
 		surface[i]->GetProperty()->SetInterpolationToPhong();
 	}
 	
 	this->SetupRenderer();
+}
+
+void QMeshRenderingWidget::OnDelete() {
+	surface[Selected]->GetProperty()->SetOpacity(0);
+	surface[Selected]->ApplyProperties();
+}
+
+void QMeshRenderingWidget::OnReset() {
+	for (int i=0; i<NumSegments; i++) {
+		surface[i]->GetProperty()->SetOpacity(1.0);
+		surface[i]->ApplyProperties();
+	}
 }
 
 void QMeshRenderingWidget::SetupRenderer() {
@@ -75,7 +107,7 @@ void QMeshRenderingWidget::SetupRenderer() {
 
  	// An outline provides context around the data.
 
-	for (int i=0; i<13; i++) {
+	for (int i=0; i<NumSegments; i++) {
     	renderer->AddActor(surface[i]);
 	}
     renderer->SetBackground(0.6, 0.2, 0.5);
@@ -109,8 +141,10 @@ void QMeshRenderingWidget::SetupRenderer() {
 
     //std::cout<<"PIXELS!!!! - "<<renderWindow->ReadPixels()<<"\n";
 	//this->show();
-}
 
+	m_Layout.addWidget(&m_DeleteButton, 0, 0);
+	m_Layout.addWidget(&m_ResetButton, 0, 1);
+}
 
 void QMeshRenderingWidget::OnScalarRangeChanged(void) {
 	double* Range = gMeshRendering.GetScalarRange();
@@ -118,42 +152,10 @@ void QMeshRenderingWidget::OnScalarRangeChanged(void) {
 	for (int i=0; i<13; i++) {
 		if (Range == Mapper[i]->GetScalarRange()) {
 			gMeshRendering.SetMajorClass(FileNames[i]);
+			Selected = i;
 		}
 	}
 }
-
-void SaveMeshFile (int startValue, int endValue, string fileName) {
-    vtkSmartPointer<vtkMetaImageReader> ImageReader = vtkSmartPointer<vtkMetaImageReader>::New();
-    ImageReader->SetFileName("/home/anav/ExposureRenderer/preprocessed/Cropped/Isosurface.mhd");
-    ImageReader->SetNumberOfScalarComponents(1);
-	ImageReader->SetDataScalarTypeToUnsignedChar();
-	ImageReader->Update();
-
-	vtkSmartPointer<vtkImageThreshold> VolumeThreshold = vtkSmartPointer<vtkImageThreshold>::New();
-	VolumeThreshold->SetInputConnection(ImageReader->GetOutputPort());
-	VolumeThreshold->SetInValue(255);
-	VolumeThreshold->SetOutValue(0);
-	VolumeThreshold->ThresholdBetween(startValue, endValue);
-	//threshold->AllScalarsOff();
-
-	vtkSmartPointer<vtkImageGaussianSmooth> smoothVolume = vtkSmartPointer<vtkImageGaussianSmooth>::New();
-	smoothVolume->SetDimensionality(3);
-	smoothVolume->SetInputConnection(VolumeThreshold->GetOutputPort());
-	smoothVolume->SetStandardDeviations(1.75, 1.75, 0);
-	smoothVolume->SetRadiusFactor(2);
-
-	vtkSmartPointer<vtkImageMarchingCubes> IExtractor = vtkSmartPointer<vtkImageMarchingCubes>::New();
-	IExtractor->SetInputConnection(VolumeThreshold->GetOutputPort());
-	IExtractor->ComputeNormalsOn();
-	IExtractor->ComputeGradientsOn();
-	IExtractor->SetValue(0, 200);
-
-	vtkSmartPointer<vtkSTLWriter> writer = vtkSmartPointer<vtkSTLWriter>::New();
-	writer->SetInputConnection(IExtractor->GetOutputPort());
-	writer->SetFileName(fileName.c_str());
-	writer->Write();
-}
-
 
 QMeshRenderingWidget::~QMeshRenderingWidget() {}
 

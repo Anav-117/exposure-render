@@ -109,12 +109,15 @@ QSelectiveOpacityWidget::QSelectiveOpacityWidget(QWidget* pParent) :
     for (int i=0; i<MajorClassVector.size(); i++) {
         //LookUp.push_back({0, -1, 1});
         MajorClass[i].setText(0, tr(((string)MajorClassVector[i]).c_str()));
+        MajorClass[i].setCheckState(0, Qt::Checked);
         for (int j=0; j<MinorClassVector[i].size(); j++) {
             MinorClass[j+MinorClassIndex].setText(0, tr(((string)MinorClassVector[i][j]).c_str()));
+            MinorClass[j+MinorClassIndex].setCheckState(0, Qt::Checked);
             if (MinorClassVector[i][j].length() > 0) {
                 //LookUp.push_back({1, -1, 1});
                 for (int k=0; k<SubClassVector[j+MinorClassIndex].size(); k++) {
                     SubClass[k+SubClassIndex].setText(0, tr(((string)SubClassVector[j+MinorClassIndex][k]).c_str()));
+                    SubClass[k+SubClassIndex].setCheckState(0, Qt::Checked);
                     //std::cout<<(string)SubClassVector[j+MinorClassIndex][k];
                     if (SubClassVector[j+MinorClassIndex][k].length() > 0) {
                         MinorClass[j+MinorClassIndex].addChild((SubClass + k + SubClassIndex));
@@ -145,6 +148,7 @@ QSelectiveOpacityWidget::QSelectiveOpacityWidget(QWidget* pParent) :
 	QObject::connect(&m_OpacitySpinnerWidget, SIGNAL(valueChanged(double)), &m_OpacitySlider, SLOT(setValue(double)));
 	QObject::connect(&m_OpacitySlider, SIGNAL(valueChanged(double)), this, SLOT(OnSetOpacity(double)));
     QObject::connect(&gStatus, SIGNAL(RenderBegin()), this, SLOT(OnRenderBegin()));
+    QObject::connect(this, SIGNAL(CheckUpdated()), this, SLOT(OnCheckUpdated()));
 
     m_Button.setText(QString::fromStdString("Refresh"));
 
@@ -180,11 +184,19 @@ bool operator==(QTreeWidgetItem A, QTreeWidgetItem* B) {
     return A.text(0) == B->text(0);
 }
 
+void QSelectiveOpacityWidget::OnCheckUpdated() {
+    for (int i=0; i<SubClassSize; i++) {
+        OpacityArray[i][1] = SubClass[i].checkState(0)/2.0f;
+    }
+}
+
 void QSelectiveOpacityWidget::OnMajorClassChanged() {
     string Name = gMeshRendering.GetMajorClass();
 
     for (int i=0; i<MajorClassSize; i++) {
         if (Name == MajorClass[i].text(0).toStdString()) {
+            MajorClass[i].setCheckState(0, Qt::Checked);
+            UpdateCheckBox(&MajorClass[i]);
             int NumChildren = 0;
             for (int j=0; j<i; j++) {
                 NumChildren += MajorClass[j].childCount();
@@ -200,6 +212,8 @@ void QSelectiveOpacityWidget::OnMajorClassChanged() {
             }
         }
         else {
+            MajorClass[i].setCheckState(0, Qt::Unchecked);
+            UpdateCheckBox(&MajorClass[i]);
             int NumChildren = 0;
             for (int j=0; j<i; j++) {
                 NumChildren += MajorClass[j].childCount();
@@ -214,8 +228,11 @@ void QSelectiveOpacityWidget::OnMajorClassChanged() {
                 }
             }
         }
-        ResetTex();
     }
+
+    emit CheckUpdated();
+
+    ResetTex();
 }
 
 void QSelectiveOpacityWidget::OnRenderBegin(void)
@@ -227,7 +244,6 @@ void QSelectiveOpacityWidget::OnMajorChanged(int index) {
     MajorChanged = true;
     SubChanged = MinorChanged = false;
     Index = index;
-    //gMeshRendering.SetMajorClass(MajorClass[Index].text(0).toStdString());
 }
 
 void QSelectiveOpacityWidget::OnMinorChanged(int index) {
@@ -241,10 +257,58 @@ void QSelectiveOpacityWidget::OnSubChanged(int index) {
     MajorChanged = MinorChanged = false;
     Index = index;
     m_OpacitySpinnerWidget.setValue(OpacityArray[Index][1]);
-    //std::cout<<"VALUE "<<OpacityArray[Index][1]<<"\n";
+}
+
+void QSelectiveOpacityWidget::UpdateCheckBox(QTreeWidgetItem* Item) {
+    if (Item->childCount() > 0) {
+        for (int i=0; i<Item->childCount(); i++) {
+            Item->child(i)->setCheckState(0, Item->checkState(0));
+            UpdateCheckBox(Item->child(i));
+        }
+    }
+
+    if (Item->parent()) {
+        if (Item->checkState(0) == Qt::Checked && Item->parent()->checkState(0) == Qt::Unchecked) {
+            Item->parent()->setCheckState(0, Qt::PartiallyChecked);
+            if (Item->parent()->parent()){
+                if (Item->parent()->parent()->checkState(0) == Qt::Unchecked) {
+                    Item->parent()->parent()->setCheckState(0, Qt::PartiallyChecked);
+                }
+            }
+        }
+        else if (Item->checkState(0) == Qt::Checked && Item->parent()->checkState(0) == Qt::PartiallyChecked) {
+            bool partial = false;
+            for (int i=0; i<Item->parent()->childCount(); i++) {
+                if (Item->parent()->child(i)->checkState(0) == Qt::Unchecked) 
+                    partial = true;
+            }
+            Item->parent()->setCheckState(0, (partial) ? Qt::PartiallyChecked : Qt::Checked);
+        }
+        else if (Item->checkState(0) == Qt::Unchecked && Item->parent()->checkState(0) == Qt::PartiallyChecked) {
+            bool partial = false;
+            for (int i=0; i<Item->parent()->childCount(); i++) {
+                if (Item->parent()->child(i)->checkState(0) == Qt::Checked) 
+                    partial = true;
+            }
+            Item->parent()->setCheckState(0, (partial) ? Qt::PartiallyChecked : Qt::Unchecked);
+        }
+    }
+
+    emit CheckUpdated();
+
+    ResetTex();
 }
 
 void QSelectiveOpacityWidget::OnSelection(QTreeWidgetItem* Item, int col) {
+    if (Item->checkState(0) == Qt::Unchecked) {
+        Item->setCheckState(0, Qt::Checked);
+    }
+    else {
+        Item->setCheckState(0, Qt::Unchecked);
+    }
+
+    UpdateCheckBox(Item);
+
     bool found = false;
 
     for (int i=0; i<MajorClassSize; i++) {
@@ -275,7 +339,7 @@ void QSelectiveOpacityWidget::OnSelection(QTreeWidgetItem* Item, int col) {
     }
 }
 
-void QSelectiveOpacityWidget::OnButtonClick() {
+void QSelectiveOpacityWidget::OnButtonClick() {    
     if (SubChanged) {
         OpacityArray[Index][1] = (float)m_OpacitySpinnerWidget.value();
         ResetTex();

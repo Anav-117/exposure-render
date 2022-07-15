@@ -12,16 +12,18 @@ public:
     QSelectiveOpacityWidget(QWidget* pParent = NULL);
     virtual ~QSelectiveOpacityWidget(void);
 	void ResetTex();
+	void UpdateCheckBox(QTreeWidgetItem* Item);
+	void OnMajorChanged(int);
+	void OnMinorChanged(int);
+	void OnSubChanged(int);
 
 public slots:
 	void OnMajorClassChanged();
 	void OnRenderBegin(void);
 	void OnSetOpacity(double Opacity);
-	void OnMajorChanged(int);
-	void OnMinorChanged(int);
-	void OnSubChanged(int);
 	void OnSelection(QTreeWidgetItem* Item, int col);
 	void OnButtonClick();
+	void OnCheckUpdated();
     
 private:
 	QGridLayout		    	m_MainLayout;
@@ -47,4 +49,7 @@ private:
 	float*				Buffer;
 	int 				max;
 	vector<int>			Segments;
+
+signals:
+	void CheckUpdated(void);	
 };

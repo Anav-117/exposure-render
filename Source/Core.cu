@@ -106,8 +106,6 @@ void BindDensityBufferRGBA(uchar4* pBuffer, short* pBufferRGB, short* pBufferSki
 	cudaChannelFormatDesc ChannelDescRGB = cudaCreateChannelDesc<short>();
 	cudaChannelFormatDesc ChannelDescSkin = cudaCreateChannelDesc<short>();
 
-	printf("C1\n");
-
 	HandleCudaError(cudaMalloc3DArray(&gpDensityArray, &ChannelDesc, Extent));
 	HandleCudaError(cudaMalloc3DArray(&gpDensityArrayRGB, &ChannelDescRGB, ExtentRGB));
 	HandleCudaError(cudaMalloc3DArray(&gpDensityArraySkin, &ChannelDescSkin, ExtentRGB));
@@ -130,8 +128,6 @@ void BindDensityBufferRGBA(uchar4* pBuffer, short* pBufferRGB, short* pBufferSki
 	
 	HandleCudaError(cudaMemcpy3D(&CopyParamsRGB));
 
-	printf("C2\n");
-
 	cudaMemcpy3DParms CopyParamsSkin = {0};
 
 	CopyParamsSkin.srcPtr	= make_cudaPitchedPtr(pBufferSkin, ExtentRGB.width * sizeof(short), ExtentRGB.width, ExtentRGB.height);
@@ -140,8 +136,6 @@ void BindDensityBufferRGBA(uchar4* pBuffer, short* pBufferRGB, short* pBufferSki
 	CopyParamsSkin.kind		= cudaMemcpyHostToDevice;
 	
 	HandleCudaError(cudaMemcpy3D(&CopyParamsSkin));
-
-	printf("C3\n");
 
 	gTexDensityRGBA.normalized		= true;
 	gTexDensityRGBA.filterMode		= cudaFilterModeLinear;      
@@ -161,13 +155,9 @@ void BindDensityBufferRGBA(uchar4* pBuffer, short* pBufferRGB, short* pBufferSki
 	gTexDensitySkin.addressMode[1]	= cudaAddressModeClamp;
   	gTexDensitySkin.addressMode[2]	= cudaAddressModeClamp;
 
-	printf("C3\n");
-
 	HandleCudaError(cudaBindTextureToArray(gTexDensityRGBA, gpDensityArray, ChannelDesc));
 	HandleCudaError(cudaBindTextureToArray(gTexDensityRGB, gpDensityArrayRGB, ChannelDescRGB));
-	printf("C4\n");
 	HandleCudaError(cudaBindTextureToArray(gTexDensitySkin, gpDensityArraySkin, ChannelDescSkin));
-	printf("C5\n");
 	printf("BUFFERS LOADED\n");
 }
 

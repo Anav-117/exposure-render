@@ -40,7 +40,8 @@ public:
     // If we picked something before, reset its property
     if (this->LastPickedActor)
     {
-      this->LastPickedActor->GetProperty()->DeepCopy(this->LastPickedProperty);
+      if (this->LastPickedActor->GetProperty()->GetOpacity() > 0.0)
+        this->LastPickedActor->GetProperty()->DeepCopy(this->LastPickedProperty);
     }
     this->LastPickedActor = picker->GetActor();
     if (this->LastPickedActor)
@@ -52,11 +53,7 @@ public:
       // Highlight the picked actor by changing its properties
       this->LastPickedActor->GetProperty()->SetColor(
           colors->GetColor3d("Red").GetData());
-      this->LastPickedActor->GetProperty()->SetDiffuse(1.0);
-      this->LastPickedActor->GetProperty()->SetSpecular(0.0);
-      //this->LastPickedActor->GetProperty()->EdgeVisibilityOn();
       gMeshRendering.SetScalarRange(this->LastPickedActor->GetMapper()->GetScalarRange());
-      //std::cout<<"THIS - "<<this->LastPickedActor->GetMapper()->GetScalarRange()<<"\n";
     }
 
     // Forward events
