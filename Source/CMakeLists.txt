@@ -768,3 +768,5 @@ SET(CPACK_PACKAGE_EXECUTABLES "ExposureRender;Exposure Render")
 INCLUDE(CPack)
 
 endif()
+
+add_subdirectory(Utils)

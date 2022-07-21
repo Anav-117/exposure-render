@@ -14,23 +14,24 @@
 #pragma once
 
 #include "Transport.cuh"
-#include "CudaUtilities.h"
+//#include "CudaUtilities.h"
 
-#define KRNL_MS_BLOCK_W		32
+#define KRNL_MS_BLOCK_W		16
 #define KRNL_MS_BLOCK_H		8
-#define KRNL_MS_BLOCK_SIZE	KRNL_MS_BLOCK_W * KRNL_MS_BLOCK_H
+//#define KRNL_MS_BLOCK_SIZE	KRNL_MS_BLOCK_W * KRNL_MS_BLOCK_H
 
 KERNEL void KrnlMultipleScattering(CScene* pScene, CCudaView* pView, bool RGBA)
 {
+	//printf("Starting Kernel\n");
 	SetResolution((float)pScene->m_Resolution.GetResX(), (float)pScene->m_Resolution.GetResY(), (float)pScene->m_Resolution.GetResZ(), (float)pScene->m_ResolutionSegment.GetResX(), (float)pScene->m_ResolutionSegment.GetResY(), (float)pScene->m_ResolutionSegment.GetResZ());
 	SetSegmentAvailable(pScene->m_SegmentAvailable);
 	SetRGBA(pScene->m_RGBA);
 
 	const int X		= (blockIdx.x * blockDim.x) + threadIdx.x;
 	const int Y		= (blockIdx.y * blockDim.y) + threadIdx.y;
-	const int PID	= (Y * gFilmWidth) + X;
+	//const int PID	= (Y * gFilmWidth) + X;
 
-	if (X >= gFilmWidth || Y >= gFilmHeight || PID >= gFilmNoPixels)
+	if (X >= gFilmWidth || Y >= gFilmHeight)// || PID >= gFilmNoPixels)
 		return;
 
 	CRNG RNG(pView->m_RandomSeeds1.GetPtr(X, Y), pView->m_RandomSeeds2.GetPtr(X, Y));
@@ -44,7 +45,7 @@ KERNEL void KrnlMultipleScattering(CScene* pScene, CCudaView* pView, bool RGBA)
  	pScene->m_Camera.GenerateRay(UV, RNG.Get2(), Re.m_O, Re.m_D);
 
 	Re.m_MinT = 0.0f; 
-	Re.m_MaxT = FLT_MAX;
+	Re.m_MaxT = 1500000.0f;
 
 	Vec3f Pe, Pl;
 	
@@ -56,8 +57,7 @@ KERNEL void KrnlMultipleScattering(CScene* pScene, CCudaView* pView, bool RGBA)
 		{
 			if (NearestLight(pScene, CRay(Re.m_O, Re.m_D, 0.0f, (Pe - Re.m_O).Length()), Li, Pl, pLight))
 			{
-				float4 ColorXYZA = make_float4(Lv.c[0], Lv.c[1], Lv.c[2], 0.0f);
-//				surf2Dwrite(ColorXYZA, gSurfRunningEstimateXyza, X * sizeof(float4), Y);
+				pView->m_FrameEstimateXyza.Set(CColorXyza(Lv.c[0], Lv.c[1], Lv.c[2]), X, Y);
 				return;
 			}
 		 
@@ -79,14 +79,12 @@ KERNEL void KrnlMultipleScattering(CScene* pScene, CCudaView* pView, bool RGBA)
 		Re.m_D		= UniformSampleSphere(RNG.Get2());
 		Re.m_MinT	= 0.0f;
 		Re.m_MaxT	= INF_MAX;
-
 		Tr *= INV_4_PI_F;
 	}
 
 	__syncthreads();
 
-	float4 ColorXYZA = make_float4(Lv.c[0], Lv.c[1], Lv.c[2], 0.0f);
-//	surf2Dwrite(ColorXYZA, gSurfRunningEstimateXyza, X * sizeof(float4), Y);
+	pView->m_FrameEstimateXyza.Set(CColorXyza(Lv.c[0], Lv.c[1], Lv.c[2]), X, Y);
 }
 
 void MultipleScattering(CScene* pScene, CScene* pDevScene, CCudaView* pView, bool RGBA)

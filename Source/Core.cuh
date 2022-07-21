@@ -22,7 +22,7 @@ class CVariance;
 
 extern "C" void SetgDensityScale (float nDensityScale);
 extern "C" void BindDensityBuffer(short* pBuffer, cudaExtent Extent);
-extern "C" void BindDensityBufferRGBA(uchar4* pBuffer, short* pBufferRGB, cudaExtent Extent, cudaExtent ExtentRGB);
+extern "C" void BindDensityBufferRGBA(uchar4* pBuffer, short* pBufferRGB, short* pBufferSkin, cudaExtent Extent, cudaExtent ExtentRGB);
 extern "C" void BindGradientMagnitudeBuffer(short* pBuffer, cudaExtent Extent);
 extern "C" void UnbindDensityBuffer(void);
 extern "C" void UnbindDensityBufferRGBA(void);
@@ -38,6 +38,7 @@ extern "C" void BindTransferFunctionDiffuse(CTransferFunction& TransferFunctionD
 extern "C" void BindTransferFunctionSpecular(CTransferFunction& TransferFunctionSpecular);
 extern "C" void BindTransferFunctionRoughness(CTransferFunction& TransferFunctionRoughness);
 extern "C" void BindTransferFunctionEmission(CTransferFunction& TransferFunctionEmission);
+extern "C" void UnbindTextureSelectiveOpacity(void);
 extern "C" void UnbindTransferFunctionOpacity(void);
 extern "C" void UnbindTransferFunctionDiffuse(void);
 extern "C" void UnbindTransferFunctionSpecular(void);

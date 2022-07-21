@@ -1836,20 +1836,33 @@ public:
 
 	HO CSelectiveOpacity(void) {
 		Size = 1;
-		OpacityBuffer = new float[Size];
+		OpacityBuffer = new float [Size];
+	}
 
-		for (int i=0; i<Size; i++) {
-			OpacityBuffer[i] = 0.0f;
-		}
+	HO ~CSelectiveOpacity(void) {
+		//delete OpacityBuffer;
+	}
+
+	HO void SetOpacityBuffer(float* Buffer) {
+		OpacityBuffer = Buffer;
+	}
+
+	HO float* GetOpacityBuffer(void) {
+		return OpacityBuffer;
+	}
+
+	HO int GetSize() {
+		return Size;
 	}
 
 	HO void SetSize(int mSize) {
-		Size = mSize;
-		OpacityBuffer = new float[Size];
-
-		for (int i=0; i<Size; i++) {
-			OpacityBuffer[i] = 0.0f;
+		if (Size == mSize) {
+			return;
 		}
+
+		Size = mSize;
+		delete OpacityBuffer;
+		OpacityBuffer = new float [Size];
 	}
 
 	HO void printACK(void) {

@@ -147,6 +147,7 @@ QRenderThread::QRenderThread(const QString& FileName, QObject* pParent /*= NULL*
 	m_pRenderImage(NULL),
 	m_pDensityBuffer(NULL),
 	m_pDensityBufferRGB(NULL),
+	m_pDensityBufferSkin(NULL),
 	m_pDensityBufferRGBA(NULL),
 	m_pGradientMagnitudeBuffer(NULL),
 	m_Abort(false),
@@ -164,9 +165,14 @@ QRenderThread::QRenderThread(const QRenderThread& Other)
 
 QRenderThread::~QRenderThread(void)
 {
-	free(m_pDensityBuffer);
+	if (!gScene.m_RGBA) {
+		free(m_pDensityBuffer);
+	}
+	else {
 	free(m_pDensityBufferRGB);
+	free(m_pDensityBufferSkin);
 	free(m_pDensityBufferRGBA);
+	}
 }
 
 QRenderThread& QRenderThread::operator=(const QRenderThread& Other)
@@ -175,6 +181,7 @@ QRenderThread& QRenderThread::operator=(const QRenderThread& Other)
 	m_pRenderImage				= Other.m_pRenderImage;
 	m_pDensityBuffer			= Other.m_pDensityBuffer;
 	m_pDensityBufferRGB			= Other.m_pDensityBufferRGB;
+	m_pDensityBufferSkin		= Other.m_pDensityBufferSkin;
 	m_pDensityBufferRGBA		= Other.m_pDensityBufferRGBA;
 	RGBAVolume					= Other.RGBAVolume;
 	m_pGradientMagnitudeBuffer	= Other.m_pGradientMagnitudeBuffer;
@@ -217,13 +224,14 @@ void QRenderThread::run()
 
 	// Bind density buffer to texture
 	Log("Copying density volume to device", "grid");
-	gStatus.SetStatisticChanged("CUDA Memory", "Density Buffer", QString::number(gScene.m_Resolution.GetNoElements() * sizeof(short) / MB, 'f', 2), "MB");
 	
 	if (!RGBAVolume) {
 		BindDensityBuffer((short*)m_pDensityBuffer, Res);
+		gStatus.SetStatisticChanged("CUDA Memory", "Density Buffer", QString::number(gScene.m_Resolution.GetNoElements() * sizeof(short) / MB, 'f', 2), "MB");
 	}
 	else {
-		BindDensityBufferRGBA((uchar4*)m_pDensityBufferRGBA, (short*)m_pDensityBufferRGB, Res, ResRGB);
+		BindDensityBufferRGBA((uchar4*)m_pDensityBufferRGBA, (short*)m_pDensityBufferRGB, (short*)m_pDensityBufferSkin, Res, ResRGB);
+		gStatus.SetStatisticChanged("CUDA Memory", "Density Buffer", QString::number(gScene.m_Resolution.GetNoElements() * sizeof(uchar4) / MB, 'f', 2), "MB");
 	}
 
 	// Bind gradient magnitude buffer to texture
@@ -320,6 +328,7 @@ void QRenderThread::run()
 			BindConstants(&SceneCopy);
 
 			BindTextureSelectiveOpacity(SceneCopy.m_SelectiveOpacity.OpacityBuffer, SceneCopy.m_SelectiveOpacity.Size);
+			gStatus.SetStatisticChanged("CUDA Memory", "Selective Opacity Buffer", QString::number(SceneCopy.m_SelectiveOpacity.GetSize() * sizeof(short) / MB, 'f', 2), "MB");		
 			BindTransferFunctionOpacity(SceneCopy.m_TransferFunctions.m_Opacity);
 			BindTransferFunctionDiffuse(SceneCopy.m_TransferFunctions.m_Diffuse);
 			BindTransferFunctionSpecular(SceneCopy.m_TransferFunctions.m_Specular);
@@ -373,6 +382,7 @@ void QRenderThread::run()
 
 	UnbindDensityBuffer();
 
+	UnbindTextureSelectiveOpacity();
 	UnbindTransferFunctionOpacity();
 	UnbindTransferFunctionDiffuse();
 	UnbindTransferFunctionSpecular();
@@ -552,94 +562,6 @@ bool QRenderThread::Load(QString& FileName)
 
 bool QRenderThread::LoadRGBA(QString& FileName)
 {
-	// vtkSmartPointer<vtkNamedColors> colors = vtkNamedColors::New();
-	
-	// std::array<unsigned char, 4> skinColor{{255, 0, 0, 255}};
-  	// colors->SetColor("SkinColor", skinColor.data());
-  	// std::array<unsigned char, 4> backColor{{255, 229, 200, 255}};
-  	// colors->SetColor("BackfaceColor", backColor.data());
-  	// std::array<unsigned char, 4> bkg{{51, 77, 102, 255}};
-  	// colors->SetColor("BkgColor", bkg.data());
-
-	// vtkSmartPointer<vtkImageThreshold> VolumeThreshold = vtkImageThreshold::New();
-	// VolumeThreshold->SetInputConnection(reader->GetOutputPort());
-	// VolumeThreshold->SetInValue(255);
-	// VolumeThreshold->SetOutValue(0);
-	// VolumeThreshold->ThresholdBetween(251.9, 252.1);
-	// //threshold->AllScalarsOff();
-
-	// vtkSmartPointer<vtkImageGaussianSmooth> smoothVolume = vtkImageGaussianSmooth::New();
-	// smoothVolume->SetDimensionality(3);
-	// smoothVolume->SetInputConnection(VolumeThreshold->GetOutputPort());
-	// smoothVolume->SetStandardDeviations(1.75, 1.75, 0);
-	// smoothVolume->SetRadiusFactor(2);
-
-	// vtkSmartPointer<vtkImageMarchingCubes> IExtractor = vtkImageMarchingCubes::New();
-	// IExtractor->SetInputConnection(smoothVolume->GetOutputPort());
-	// IExtractor->ComputeNormalsOn();
-	// IExtractor->ComputeGradientsOn();
-	// IExtractor->SetValue(0, 200);
-
-	// vtkSmartPointer<vtkPolyDataConnectivityFilter> confilter = vtkPolyDataConnectivityFilter::New();
-	// confilter->SetInputConnection(IExtractor->GetOutputPort());
-	// confilter->SetExtractionModeToLargestRegion();
-	
-	// vtkSmartPointer<vtkPolyDataMapper> Mapper = vtkPolyDataMapper::New();
-	// Mapper->SetInputConnection(IExtractor->GetOutputPort());
-	// Mapper->ScalarVisibilityOff();
-
-	// vtkSmartPointer<vtkActor> surface = vtkActor::New();
-	// surface->SetMapper(Mapper);
-	// surface->GetProperty()->SetDiffuseColor(colors->GetColor3d("SkinColor").GetData());
-
-	// vtkSmartPointer<vtkProperty> backProp = vtkProperty::New();
- 	// backProp->SetDiffuseColor(colors->GetColor3d("BackfaceColor").GetData());
-  	// surface->SetBackfaceProperty(backProp);
-
- 	// // An outline provides context around the data.
- 
- 	// vtkSmartPointer<vtkOutlineFilter> outlineData = vtkOutlineFilter::New();
-	// outlineData->SetInputConnection(reader->GetOutputPort());
-
-	// vtkSmartPointer<vtkPolyDataMapper> mapOutline = vtkPolyDataMapper::New();
-  	// mapOutline->SetInputConnection(outlineData->GetOutputPort());
-
-	// vtkSmartPointer<vtkActor> outline = vtkActor::New();
-  	// outline->SetMapper(mapOutline);
-  	// outline->GetProperty()->SetColor(colors->GetColor3d("Black").GetData());
-
-	// vtkSmartPointer<vtkCamera> aCamera = vtkCamera::New();
-  	// aCamera->SetViewUp(0, 0, -1);
-	// aCamera->SetPosition(0, -1, 0);
-	// aCamera->SetFocalPoint(0, 0, 0);
-	// aCamera->ComputeViewPlaneNormal();
-	// aCamera->Azimuth(30.0);
-	// aCamera->Elevation(30.0);
-	
-	// //VTK Render Window creation test
-	// vtkSmartPointer<vtkRenderer> aRenderer = vtkRenderer::New(); 
-	// vtkSmartPointer<vtkRenderWindow> renWin = vtkRenderWindow::New();
-	// vtkSmartPointer<vtkRenderWindowInteractor> renderWindowInteractor = vtkRenderWindowInteractor::New();	
-	// vtkSmartPointer<vtkInteractorStyleImage> style = vtkInteractorStyleImage::New();
-	// renWin->AddRenderer(aRenderer);
-	// //renderWindowInteractor->SetInteractorStyle(style);
-	// renderWindowInteractor->SetRenderWindow(renWin);
-
-	// aRenderer->AddActor(outline);
-	// aRenderer->AddActor(surface);
-	// //aRenderer->AddVolume(volume);
-	// aRenderer->SetActiveCamera(aCamera);
-	// aRenderer->ResetCamera();
-	// aCamera->Dolly(1.5);
-
-	// aRenderer->SetBackground(colors->GetColor3d("BkgColor").GetData());
-	// aRenderer->ResetCameraClippingRange();
-	// renWin->Render();
-	// renderWindowInteractor->Initialize();
-
-	// renderWindowInteractor->Start();
-	
-
 	m_FileName = QString(QFileInfo(FileName).filePath().replace("\\\\", "/"));
 
 	RGBAVolume = true;
@@ -654,13 +576,15 @@ bool QRenderThread::LoadRGBA(QString& FileName)
 	//std::cout << PosTraceFile;
 	
 	string SegmentFile = rawname + "_Segments.mhd";
+	string SegmentFileSkin = rawname + "_Segments_Skin.mhd";
 	string SegmentFileBG = rawname + "_SegmentsBG.mhd";
 
-	vtkSmartPointer<vtkMetaImageReader> reader = vtkMetaImageReader::New();
-	vtkSmartPointer<vtkMetaImageReader> readerSeg = vtkMetaImageReader::New();
+	vtkSmartPointer<vtkMetaImageReader> reader = vtkSmartPointer<vtkMetaImageReader>::New();
+	vtkSmartPointer<vtkMetaImageReader> readerSeg = vtkSmartPointer<vtkMetaImageReader>::New();
+	vtkSmartPointer<vtkMetaImageReader> readerSkin = vtkSmartPointer<vtkMetaImageReader>::New();
 	//vtkSmartPointer<vtkNrrdReader> reader = vtkNrrdReader::New();
 
-	if (!reader->CanReadFile(QString::fromStdString(SegmentFileBG).toLatin1()) || !readerSeg->CanReadFile(QString::fromStdString(SegmentFile).toLatin1()) )
+	if (!reader->CanReadFile(QString::fromStdString(SegmentFileBG).toLatin1()) || !readerSeg->CanReadFile(QString::fromStdString(SegmentFile).toLatin1()) || !readerSeg->CanReadFile(QString::fromStdString(SegmentFileSkin).toLatin1()))
 	{
 		std::cout << "Cannot read Segment Volume\n";
 		gScene.m_SegmentAvailable = false;
@@ -669,7 +593,7 @@ bool QRenderThread::LoadRGBA(QString& FileName)
 		gScene.m_SegmentAvailable = true;
 	}
 
-	vtkSmartPointer<vtkImageExtractComponents> segmentChannel = vtkImageExtractComponents::New();
+	vtkSmartPointer<vtkImageExtractComponents> segmentChannel = vtkSmartPointer<vtkImageExtractComponents>::New();
 
 	if (gScene.m_SegmentAvailable) {
 		reader->SetFileName(QString::fromStdString(SegmentFileBG).toLatin1());
@@ -682,6 +606,11 @@ bool QRenderThread::LoadRGBA(QString& FileName)
 		readerSeg->SetDataScalarTypeToUnsignedShort();
 		readerSeg->Update();
 
+		readerSkin->SetFileName(QString::fromStdString(SegmentFileSkin).toLatin1());
+		readerSkin->SetNumberOfScalarComponents(1);
+		readerSkin->SetDataScalarTypeToUnsignedShort();
+		readerSkin->Update();
+
 		segmentChannel->SetInputConnection(reader->GetOutputPort());
 		segmentChannel->SetComponents(0);
 		segmentChannel->Update();
@@ -690,12 +619,9 @@ bool QRenderThread::LoadRGBA(QString& FileName)
 		{
 			std::cout<<"Error loading file "<<QString(vtkErrorCode::GetStringFromErrorCode(reader->GetErrorCode())).toStdString()<<"\n";
 		}
-		else {
-			std::cout<<"Segment Volume Read\n";
-		}
 	}
 	// Create meta image reader
-	vtkSmartPointer<vtkMetaImageReader> MetaImageReader = vtkMetaImageReader::New();
+	vtkSmartPointer<vtkMetaImageReader> MetaImageReader = vtkSmartPointer<vtkMetaImageReader>::New();
 
 	QFileInfo FileInfo(QString(QFileInfo(FileName).filePath().replace("\\\\", "/")));
 
@@ -726,7 +652,7 @@ bool QRenderThread::LoadRGBA(QString& FileName)
 		return false;
 	}
 
-	vtkSmartPointer<vtkImageCast> ImageCast = vtkImageCast::New();
+	vtkSmartPointer<vtkImageCast> ImageCast = vtkSmartPointer<vtkImageCast>::New();
 	
 	Log("Casting volume data type to short", "grid");
 
@@ -739,8 +665,7 @@ bool QRenderThread::LoadRGBA(QString& FileName)
 		return false;
 	}
 
-	std::cout <<"Attempting to set volume\n";
-	vtkSmartPointer<vtkImageAppendComponents> appendRGBA = vtkImageAppendComponents::New();
+	vtkSmartPointer<vtkImageAppendComponents> appendRGBA = vtkSmartPointer<vtkImageAppendComponents>::New();
 	appendRGBA->SetInputConnection(MetaImageReader->GetOutputPort());
 	//append->AddInputConnection(IntensityVolume->GetOutputPort());
 	appendRGBA->AddInputConnection(reader->GetOutputPort());
@@ -755,12 +680,9 @@ bool QRenderThread::LoadRGBA(QString& FileName)
 
 	std::cout<<"Resolution - "<<gScene.m_Resolution.GetResX()<<" : "<<gScene.m_Resolution.GetResY()<<" : "<<gScene.m_Resolution.GetResZ()<<"\n";
 
-	const int DensityBufferSize = gScene.m_Resolution.GetNoElements() * sizeof(uchar4);
-	std::cout<<"SIZE = "<<DensityBufferSize<<"\n";
+	const long DensityBufferSize = gScene.m_Resolution.GetNoElements() * sizeof(uchar4);
  	m_pDensityBufferRGBA = (uchar4*)malloc(DensityBufferSize);
 	memcpy(m_pDensityBufferRGBA, appendRGBA->GetOutput()->GetScalarPointer(), DensityBufferSize);
-
-	std::cout<<"Volume Set\n";
 
 	// Intensity range
 	double* pIntensityRange = MetaImageReader->GetOutput()->GetScalarRange();
@@ -770,8 +692,6 @@ bool QRenderThread::LoadRGBA(QString& FileName)
 	Log("Intensity range: [" + QString::number(gScene.m_IntensityRange.GetMin()) + ", " + QString::number(gScene.m_IntensityRange.GetMax()) + "]", "grid");
 	// Spacing
 	double* pSpacing = MetaImageReader->GetOutput()->GetSpacing();
-
-	std::cout<<"1\n";
 
 	gScene.m_Spacing.x = (float)pSpacing[0];
 	gScene.m_Spacing.y = (float)pSpacing[1];
@@ -785,69 +705,51 @@ bool QRenderThread::LoadRGBA(QString& FileName)
 	gScene.m_BoundingBox.m_MinP	= Vec3f(0.0f);
 	gScene.m_BoundingBox.m_MaxP	= PhysicalSize / PhysicalSize.Max();
 	gScene.m_GradientDelta = 1.0f / (float)gScene.m_Resolution.GetMax();
-	
-	std::cout<<"2\n";
 
 	Log("Bounding box: " + FormatVector(gScene.m_BoundingBox.m_MinP, 2) + " - " + FormatVector(gScene.m_BoundingBox.m_MaxP), "grid");
 
-	vtkSmartPointer<vtkImageExtractComponents> RGBVolume = vtkImageExtractComponents::New();
+	vtkSmartPointer<vtkImageExtractComponents> RGBVolume = vtkSmartPointer<vtkImageExtractComponents>::New();
 	RGBVolume->SetInputConnection(ImageCast->GetOutputPort());
 	RGBVolume->SetComponents(0, 1, 2);
 	RGBVolume->Update();
 
-	std::cout<<"2.1\n";
-
-	vtkSmartPointer<vtkImageRGBToHSI> HSIVolume = vtkImageRGBToHSI::New();
+	vtkSmartPointer<vtkImageRGBToHSI> HSIVolume = vtkSmartPointer<vtkImageRGBToHSI>::New();
 	HSIVolume->SetInputConnection(RGBVolume->GetOutputPort());
 	HSIVolume->Update();
 
-	std::cout<<"2.2\n";
-
-	vtkSmartPointer<vtkImageExtractComponents> IntensityVolume = vtkImageExtractComponents::New();
+	vtkSmartPointer<vtkImageExtractComponents> IntensityVolume = vtkSmartPointer<vtkImageExtractComponents>::New();
 	IntensityVolume->SetInputConnection(HSIVolume->GetOutputPort());
 	IntensityVolume->SetComponents(2);
 	IntensityVolume->Update();
-	
-	std::cout<<"3\n";
 
 	if (gScene.m_SegmentAvailable) {	
-		// vtkSmartPointer<vtkImageAppendComponents> append = vtkImageAppendComponents::New();
-		// append->SetInputConnection(readerSeg->GetOutputPort());
-		// //append->AddInputConnection(IntensityVolume->GetOutputPort());
-		// append->AddInputConnection(readerSeg->GetOutputPort());
-		// append->AddInputConnection(readerSeg->GetOutputPort());
-		// append->AddInputConnection(readerSeg->GetOutputPort());
-		// append->Update();
 
 		int* pVolumeResolutionSegment = readerSeg->GetOutput()->GetExtent();
 		gScene.m_ResolutionSegment.SetResXYZ(Vec3i(pVolumeResolutionSegment[1] + 1, pVolumeResolutionSegment[3] + 1, pVolumeResolutionSegment[5] + 1));
 
-		std::cout <<"\nAttempting to set segment volume\n";
-
-		const int DensityBufferSizeRGB = gScene.m_ResolutionSegment.GetNoElements() * sizeof(short);
+		const long DensityBufferSizeRGB = gScene.m_ResolutionSegment.GetNoElements() * sizeof(short);
 		m_pDensityBufferRGB = (short*)malloc(DensityBufferSizeRGB);
-		std::cout<<"SIZE - "<<DensityBufferSizeRGB<<"\n";
 		memcpy(m_pDensityBufferRGB, readerSeg->GetOutput()->GetScalarPointer(), DensityBufferSizeRGB);
 
-		std::cout<<"Segment Volume Set\n";
+		pVolumeResolutionSegment = readerSkin->GetOutput()->GetExtent();
+		gScene.m_ResolutionSegment.SetResXYZ(Vec3i(pVolumeResolutionSegment[1] + 1, pVolumeResolutionSegment[3] + 1, pVolumeResolutionSegment[5] + 1));
+
+		//const long DensityBufferSizeSkin = gScene.m_ResolutionSegment.GetNoElements() * sizeof(short);
+		m_pDensityBufferSkin = (short*)malloc(DensityBufferSizeRGB);
+		memcpy(m_pDensityBufferSkin, readerSkin->GetOutput()->GetScalarPointer(), DensityBufferSizeRGB);
+
 	}
 	else {
 		int* pVolumeResolutionSegment = MetaImageReader->GetOutput()->GetExtent();
 		gScene.m_ResolutionSegment.SetResXYZ(Vec3i(pVolumeResolutionSegment[1] + 1, pVolumeResolutionSegment[3] + 1, pVolumeResolutionSegment[5] + 1));
 
-		std::cout <<"\nAttempting to set segment volume\n";
-
-		const int DensityBufferSizeRGB = gScene.m_ResolutionSegment.GetNoElements() * sizeof(short);
+		const long DensityBufferSizeRGB = gScene.m_ResolutionSegment.GetNoElements() * sizeof(short);
 		m_pDensityBufferRGB = (short*)malloc(DensityBufferSizeRGB);
 		memcpy(m_pDensityBufferRGB, MetaImageReader->GetOutput()->GetScalarPointer(), DensityBufferSizeRGB);
-
 	}
 
-	//std::cout<<RGBVolume->GetOutput()<<std::endl;
-	//std::cout<<IntensityVolume->GetOutput();
-
 	// Gradient magnitude volume
-	vtkSmartPointer<vtkImageGradientMagnitude> GradientMagnitude = vtkImageGradientMagnitude::New();
+	vtkSmartPointer<vtkImageGradientMagnitude> GradientMagnitude = vtkSmartPointer<vtkImageGradientMagnitude>::New();
 	
 	Log("Creating gradient magnitude volume", "grid");
 		
@@ -858,8 +760,6 @@ bool QRenderThread::LoadRGBA(QString& FileName)
 	vtkImageData* GradientMagnitudeBuffer = GradientMagnitude->GetOutput();
 	// Scalar range of the gradient magnitude
 	double* pGradientMagnitudeRange = GradientMagnitudeBuffer->GetScalarRange();
-	
-	std::cout<<"4\n";
 
 	gScene.m_GradientMagnitudeRange.SetMin((float)pGradientMagnitudeRange[0]);
 	gScene.m_GradientMagnitudeRange.SetMax((float)pGradientMagnitudeRange[1]);
@@ -873,22 +773,14 @@ bool QRenderThread::LoadRGBA(QString& FileName)
 	// Build the histogram
 	Log("Creating gradient magnitude histogram", "grid");
 
-	std::cout<<"5\n";
-
 	vtkSmartPointer<vtkImageAccumulate> GradMagHistogram = vtkSmartPointer<vtkImageAccumulate>::New();
 
-	// vtkSmartPointer<vtkImageExtractComponents> RGBVolume2 = vtkImageExtractComponents::New();
-	// RGBVolume2->SetInputConnection(GradientMagnitude->GetOutputPort());
-	// RGBVolume2->SetComponents(0, 1, 2);
-	// RGBVolume2->Update();
 	GradMagHistogram->SetInputConnection(GradientMagnitude->GetOutputPort());
 	GradMagHistogram->SetComponentExtent(0, 255, 0, 0, 0, 0);
 	GradMagHistogram->SetComponentOrigin(0, 0, 0);
 	GradMagHistogram->SetComponentSpacing(gScene.m_GradientMagnitudeRange.GetRange() / 256.0f, 0, 0);
 //	GradMagHistogram->IgnoreZeroOn();
 	GradMagHistogram->Update();
-
-	std::cout<<"6\n";
 
 	gScene.m_GradMagMean = (float)GradMagHistogram->GetMean()[0];
 	gScene.m_GradientFactor = gScene.m_GradMagMean;
@@ -931,7 +823,7 @@ void QRenderThread::OnUpdateSelectiveOpacity(void) {
 	QSelectiveOpacity SelectiveOpacity;
 	SelectiveOpacity.SetOpacityBuffer(gSelectiveOpacity.GetOpacityBuffer());
 	gScene.m_SelectiveOpacity.SetSize(gSelectiveOpacity.GetSize());
-	gScene.m_SelectiveOpacity.OpacityBuffer = SelectiveOpacity.GetOpacityBuffer();
+	gScene.m_SelectiveOpacity.SetOpacityBuffer(SelectiveOpacity.GetOpacityBuffer());
 
 	//gScene.m_SelectiveOpacity.printACK();
 
