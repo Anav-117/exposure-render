@@ -20,15 +20,17 @@
 #include <array>
 #include <fstream>
 #include <string>
+#include <random>
 
 void SaveMeshFile(int startValue, int endValue, string fileName);
 
-vector<string> FileNames;// {"Skeletal system", "Lymphoid system", "Nervous system", "Sensory organs", "The Integument", "Articular system", "Muscular system", "Alimentary system", "Respiratory system", "Urinary system", "Genital system", "Endocrine glands", "Cardiovascular system"};
-vector<std::array<unsigned char, 4>> colors = {{47, 79, 79, 255}, {139, 69, 19, 255}, {0, 128, 0, 255}, {75, 0, 130, 255}, {128, 0, 0, 255}, {128, 128, 0, 255}, {0, 128, 128, 255}, {0, 0, 128, 255}, {238, 232, 170, 255}, {100, 149, 237, 255}, {255, 105, 180, 255}, {0, 255, 0, 255}, {128, 0, 128, 255}};
+vector<string> FileNames;
+vector<std::array<unsigned char, 4>> colors;
 vector<vtkSmartPointer<vtkSTLReader>> polyReader;
 vector<vtkSmartPointer<vtkPolyDataMapper>> Mapper;
 vector<vtkSmartPointer<vtkActor>> surface;
 vtkSmartPointer<vtkRenderer> renderer = vtkRenderer::New();
+vtkSmartPointer<vtkNamedColors> Colors = vtkSmartPointer<vtkNamedColors>::New();
 int NumSegments;
 
 QMeshRenderingWidget::QMeshRenderingWidget(QWidget* pParent) :
@@ -58,9 +60,10 @@ QMeshRenderingWidget::QMeshRenderingWidget(QWidget* pParent) :
 
 	Names.close();
 
-	vtkSmartPointer<vtkNamedColors> Colors = vtkSmartPointer<vtkNamedColors>::New();
-
+	std::random_device r;
+	std::uniform_int_distribution<int> dist(0, 255);
 	for (int i=0; i<13; i++) {
+		colors.push_back({dist(r), dist(r), dist(r)});
 		Colors->SetColor(to_string(i), colors[i].data());
 		polyReader.push_back(vtkSmartPointer<vtkSTLReader>::New());
 		Mapper.push_back(vtkSmartPointer<vtkPolyDataMapper>::New());
@@ -93,19 +96,12 @@ void QMeshRenderingWidget::OnDelete() {
 void QMeshRenderingWidget::OnReset() {
 	for (int i=0; i<NumSegments; i++) {
 		surface[i]->GetProperty()->SetOpacity(1.0);
+		surface[i]->GetProperty()->SetColor(Colors->GetColor3d(to_string(i)).GetData());
 		surface[i]->ApplyProperties();
 	}
 }
 
 void QMeshRenderingWidget::SetupRenderer() {
-
-    // vtkSmartPointer<vtkMetaImageReader> ImageReader = vtkMetaImageReader::New();
-    // ImageReader->SetFileName("/home/anav/ExposureRenderer/preprocessed/Cropped/Isosurface.mhd");
-    // ImageReader->SetNumberOfScalarComponents(1);
-	// ImageReader->SetDataScalarTypeToUnsignedChar();
-	// ImageReader->Update();
-
- 	// An outline provides context around the data.
 
 	for (int i=0; i<NumSegments; i++) {
     	renderer->AddActor(surface[i]);
@@ -138,9 +134,6 @@ void QMeshRenderingWidget::SetupRenderer() {
 	interactor->SetInteractorStyle(ClassPicker);
 
 	interactor->Initialize();
-
-    //std::cout<<"PIXELS!!!! - "<<renderWindow->ReadPixels()<<"\n";
-	//this->show();
 
 	m_Layout.addWidget(&m_DeleteButton, 0, 0);
 	m_Layout.addWidget(&m_ResetButton, 0, 1);
