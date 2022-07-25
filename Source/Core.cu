@@ -16,14 +16,12 @@
 texture<short, cudaTextureType3D, cudaReadModeNormalizedFloat>				gTexDensity;
 texture<short, cudaTextureType3D, cudaReadModeNormalizedFloat>				gTexDensityRGB;
 texture<uchar4, cudaTextureType3D, cudaReadModeNormalizedFloat>				gTexDensityRGBA;
-texture<short, cudaTextureType3D, cudaReadModeNormalizedFloat>				gTexDensitySkin;
 texture<short, cudaTextureType3D, cudaReadModeNormalizedFloat>				gTexGradientMagnitude;
 texture<float, cudaTextureType3D, cudaReadModeElementType>					gTexExtinction;
 texture<float, cudaTextureType1D, cudaReadModeElementType>					gTexSelectiveOpacity;
 texture<float, cudaTextureType1D, cudaReadModeElementType>					gTexOpacity;
 texture<uchar4, cudaTextureType3D, cudaReadModeElementType>					gTexOpacityRGBA;
 texture<short, cudaTextureType3D, cudaReadModeElementType>					gTexOpacityRGB;
-texture<short, cudaTextureType3D, cudaReadModeElementType>					gTexOpacitySkin;
 texture<float4, cudaTextureType1D, cudaReadModeElementType>					gTexDiffuse;
 texture<uchar4, cudaTextureType3D, cudaReadModeElementType>					gTexDiffuseRGBA;
 texture<float4, cudaTextureType1D, cudaReadModeElementType>					gTexSpecular;
@@ -33,7 +31,6 @@ texture<uchar4, cudaTextureType2D, cudaReadModeNormalizedFloat>				gTexRunningEs
 
 cudaArray* gpDensityArray				= NULL;
 cudaArray* gpDensityArrayRGB			= NULL;
-cudaArray* gpDensityArraySkin			= NULL;
 cudaArray* gpGradientMagnitudeArray		= NULL;
 cudaArray* gpOpacityArray				= NULL;
 cudaArray* gpSelectiveOpacityArray		= NULL;
@@ -98,17 +95,15 @@ CCudaModel	gModel;
 CCudaView	gRenderCanvasView;
 CCudaView	gNavigatorView;
 
-void BindDensityBufferRGBA(uchar4* pBuffer, short* pBufferRGB, short* pBufferSkin, cudaExtent Extent, cudaExtent ExtentRGB)
+void BindDensityBufferRGBA(uchar4* pBuffer, short* pBufferRGB, cudaExtent Extent, cudaExtent ExtentRGB)
 {
 	RGBA = true;
 
 	cudaChannelFormatDesc ChannelDesc = cudaCreateChannelDesc<uchar4>();
 	cudaChannelFormatDesc ChannelDescRGB = cudaCreateChannelDesc<short>();
-	cudaChannelFormatDesc ChannelDescSkin = cudaCreateChannelDesc<short>();
 
 	HandleCudaError(cudaMalloc3DArray(&gpDensityArray, &ChannelDesc, Extent));
 	HandleCudaError(cudaMalloc3DArray(&gpDensityArrayRGB, &ChannelDescRGB, ExtentRGB));
-	HandleCudaError(cudaMalloc3DArray(&gpDensityArraySkin, &ChannelDescSkin, ExtentRGB));
 	
 	cudaMemcpy3DParms CopyParams = {0};
 
@@ -128,15 +123,6 @@ void BindDensityBufferRGBA(uchar4* pBuffer, short* pBufferRGB, short* pBufferSki
 	
 	HandleCudaError(cudaMemcpy3D(&CopyParamsRGB));
 
-	cudaMemcpy3DParms CopyParamsSkin = {0};
-
-	CopyParamsSkin.srcPtr	= make_cudaPitchedPtr(pBufferSkin, ExtentRGB.width * sizeof(short), ExtentRGB.width, ExtentRGB.height);
-	CopyParamsSkin.dstArray	= gpDensityArraySkin;
-	CopyParamsSkin.extent	= ExtentRGB;
-	CopyParamsSkin.kind		= cudaMemcpyHostToDevice;
-	
-	HandleCudaError(cudaMemcpy3D(&CopyParamsSkin));
-
 	gTexDensityRGBA.normalized		= true;
 	gTexDensityRGBA.filterMode		= cudaFilterModeLinear;      
 	gTexDensityRGBA.addressMode[0]	= cudaAddressModeClamp;  
@@ -149,15 +135,9 @@ void BindDensityBufferRGBA(uchar4* pBuffer, short* pBufferRGB, short* pBufferSki
 	gTexDensityRGB.addressMode[1]	= cudaAddressModeClamp;
   	gTexDensityRGB.addressMode[2]	= cudaAddressModeClamp;
 
-	gTexDensitySkin.normalized		= true;
-	gTexDensitySkin.filterMode		= cudaFilterModeLinear;      
-	gTexDensitySkin.addressMode[0]	= cudaAddressModeClamp;  
-	gTexDensitySkin.addressMode[1]	= cudaAddressModeClamp;
-  	gTexDensitySkin.addressMode[2]	= cudaAddressModeClamp;
-
 	HandleCudaError(cudaBindTextureToArray(gTexDensityRGBA, gpDensityArray, ChannelDesc));
+	
 	HandleCudaError(cudaBindTextureToArray(gTexDensityRGB, gpDensityArrayRGB, ChannelDescRGB));
-	HandleCudaError(cudaBindTextureToArray(gTexDensitySkin, gpDensityArraySkin, ChannelDescSkin));
 	printf("BUFFERS LOADED\n");
 }
 
@@ -321,8 +301,6 @@ void BindTransferFunctionOpacity(CTransferFunction& TransferFunctionOpacity)
 		HandleCudaError(cudaBindTextureToArray(gTexOpacityRGBA, gpDensityArray, ChannelDesc));
 		cudaChannelFormatDesc ChannelDescRGB = cudaCreateChannelDesc<short>();
 		HandleCudaError(cudaBindTextureToArray(gTexOpacityRGB, gpDensityArrayRGB, ChannelDescRGB));
-		cudaChannelFormatDesc ChannelDescSkin = cudaCreateChannelDesc<short>();
-		HandleCudaError(cudaBindTextureToArray(gTexOpacitySkin, gpDensityArraySkin, ChannelDescSkin));
 	}
 	else {
 		//printf("TF\n");

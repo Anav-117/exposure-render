@@ -84,41 +84,43 @@ DEV float GetOpacity(const float& NormalizedIntensity, float3 P)
 {
 	DensityScale = gDensityScale;
 	if (isRGBA) {
-		uchar4 BG = tex3D(gTexOpacityRGBA, (P.x*(Rz/Rx))*Rx, (P.y*(Rz/Ry))*Ry, (P.z)*Rz); 
+		unsigned char BG = tex3D(gTexOpacityRGBA, (P.x*(Rz/Rx))*Rx, (P.y*(Rz/Ry))*Ry, (P.z)*Rz).w; 
 		float3 Pn;
 		Pn.x = P.x*(Rz/Rx);
 		Pn.y = P.y*(Rz/Ry);
 		Pn.z = P.z;
 		//printf("DIFF - %f\n", 1.0f - P.y);
 		if (SegmentAvailable) {
-			if ((float)(BG.w) == 2.0f) {
+			if ((float)(BG) == 2.0f) {
 				return 0.0f;
 			}
 			
-			//float op = 0.0f;
-			//float accum = 0.0f;
+			float op = 0.0f;
+			float accum = 0.0f;
+			short SegmentColor;
 
-			//for (int x = -samples / 2; x < samples / 2; ++x) {
-			//	for (int y = -samples / 2; y < samples / 2; ++y) {
-			//		for (int z = -samples / 2; z < samples / 2; ++z) {
-			//			float weight = gaussian((x), (y), (z));
-			//			short SegmentColor = tex3D(gTexOpacityRGB, Pn.x*Rx + (x), Pn.y*Ry + (y), Pn.z*Rz + (z));
-			//			op = op + (tex1D(gTexSelectiveOpacity, (float)(SegmentColor - 1.0f)) * weight);		
-			//			accum += weight;
-			//		}
-			//	}
-			//}
+			for (int x = -samples / 2; x < samples / 2; ++x) {
+				for (int y = -samples / 2; y < samples / 2; ++y) {
+					for (int z = -samples / 2; z < samples / 2; ++z) {
+						float weight = gaussian((x), (y), (z));
+						SegmentColor = tex3D(gTexOpacityRGB, Pn.x*Rx + (x), Pn.y*Ry + (y), Pn.z*Rz + (z));
+						op = op + (tex1D(gTexSelectiveOpacity, (float)(SegmentColor - 1.0f)) * weight);		
+						accum += weight;
+					}
+				}
+			}
 
 			//printf("OP - %f\n", op);
 
-			//op = op/accum;
+			op = op/accum;
 
-			short SegmentColor = tex3D(gTexOpacityRGB, Pn.x*Rx, Pn.y*Ry, Pn.z*Rz);
-			if (SegmentColor == 0) {
-				SegmentColor = tex3D(gTexOpacitySkin, Pn.x*Rx, Pn.y*Ry, Pn.z*Rz);
+			//short SegmentColor = tex3D(gTexOpacityRGB, Pn.x*Rx, Pn.y*Ry, Pn.z*Rz);
+			if (op == 0.0f) {
+				SegmentColor = tex3D(gTexOpacityRGBA, Pn.x*Rx, Pn.y*Ry, Pn.z*Rz).w * 10240.0f;
+				op = tex1D(gTexSelectiveOpacity, (float)(SegmentColor) - 1.0f);
 			}
 			
-			float op = tex1D(gTexSelectiveOpacity, (float)(SegmentColor) - 1.0f);
+			//float op = tex1D(gTexSelectiveOpacity, (float)(SegmentColor) - 1.0f);
 			
 			return (op);
 		}

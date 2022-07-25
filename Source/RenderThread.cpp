@@ -147,7 +147,6 @@ QRenderThread::QRenderThread(const QString& FileName, QObject* pParent /*= NULL*
 	m_pRenderImage(NULL),
 	m_pDensityBuffer(NULL),
 	m_pDensityBufferRGB(NULL),
-	m_pDensityBufferSkin(NULL),
 	m_pDensityBufferRGBA(NULL),
 	m_pGradientMagnitudeBuffer(NULL),
 	m_Abort(false),
@@ -170,7 +169,6 @@ QRenderThread::~QRenderThread(void)
 	}
 	else {
 	free(m_pDensityBufferRGB);
-	free(m_pDensityBufferSkin);
 	free(m_pDensityBufferRGBA);
 	}
 }
@@ -181,7 +179,6 @@ QRenderThread& QRenderThread::operator=(const QRenderThread& Other)
 	m_pRenderImage				= Other.m_pRenderImage;
 	m_pDensityBuffer			= Other.m_pDensityBuffer;
 	m_pDensityBufferRGB			= Other.m_pDensityBufferRGB;
-	m_pDensityBufferSkin		= Other.m_pDensityBufferSkin;
 	m_pDensityBufferRGBA		= Other.m_pDensityBufferRGBA;
 	RGBAVolume					= Other.RGBAVolume;
 	m_pGradientMagnitudeBuffer	= Other.m_pGradientMagnitudeBuffer;
@@ -230,7 +227,7 @@ void QRenderThread::run()
 		gStatus.SetStatisticChanged("CUDA Memory", "Density Buffer", QString::number(gScene.m_Resolution.GetNoElements() * sizeof(short) / MB, 'f', 2), "MB");
 	}
 	else {
-		BindDensityBufferRGBA((uchar4*)m_pDensityBufferRGBA, (short*)m_pDensityBufferRGB, (short*)m_pDensityBufferSkin, Res, ResRGB);
+		BindDensityBufferRGBA((uchar4*)m_pDensityBufferRGBA, (short*)m_pDensityBufferRGB, Res, ResRGB);
 		gStatus.SetStatisticChanged("CUDA Memory", "Density Buffer", QString::number(gScene.m_Resolution.GetNoElements() * sizeof(uchar4) / MB, 'f', 2), "MB");
 	}
 
@@ -576,15 +573,13 @@ bool QRenderThread::LoadRGBA(QString& FileName)
 	//std::cout << PosTraceFile;
 	
 	string SegmentFile = rawname + "_Segments.mhd";
-	string SegmentFileSkin = rawname + "_Segments_Skin.mhd";
-	string SegmentFileBG = rawname + "_SegmentsBG.mhd";
+	string SegmentFileSkin = rawname + "_Segments_BG.mhd";
 
 	vtkSmartPointer<vtkMetaImageReader> reader = vtkSmartPointer<vtkMetaImageReader>::New();
 	vtkSmartPointer<vtkMetaImageReader> readerSeg = vtkSmartPointer<vtkMetaImageReader>::New();
-	vtkSmartPointer<vtkMetaImageReader> readerSkin = vtkSmartPointer<vtkMetaImageReader>::New();
 	//vtkSmartPointer<vtkNrrdReader> reader = vtkNrrdReader::New();
 
-	if (!reader->CanReadFile(QString::fromStdString(SegmentFileBG).toLatin1()) || !readerSeg->CanReadFile(QString::fromStdString(SegmentFile).toLatin1()) || !readerSeg->CanReadFile(QString::fromStdString(SegmentFileSkin).toLatin1()))
+	if (!reader->CanReadFile(QString::fromStdString(SegmentFileSkin).toLatin1()) || !readerSeg->CanReadFile(QString::fromStdString(SegmentFile).toLatin1()))
 	{
 		std::cout << "Cannot read Segment Volume\n";
 		gScene.m_SegmentAvailable = false;
@@ -596,7 +591,7 @@ bool QRenderThread::LoadRGBA(QString& FileName)
 	vtkSmartPointer<vtkImageExtractComponents> segmentChannel = vtkSmartPointer<vtkImageExtractComponents>::New();
 
 	if (gScene.m_SegmentAvailable) {
-		reader->SetFileName(QString::fromStdString(SegmentFileBG).toLatin1());
+		reader->SetFileName(QString::fromStdString(SegmentFileSkin).toLatin1());
 		reader->SetNumberOfScalarComponents(1);
 		reader->SetDataScalarTypeToUnsignedChar();
 		reader->Update();
@@ -605,15 +600,6 @@ bool QRenderThread::LoadRGBA(QString& FileName)
 		readerSeg->SetNumberOfScalarComponents(1);
 		readerSeg->SetDataScalarTypeToUnsignedShort();
 		readerSeg->Update();
-
-		readerSkin->SetFileName(QString::fromStdString(SegmentFileSkin).toLatin1());
-		readerSkin->SetNumberOfScalarComponents(1);
-		readerSkin->SetDataScalarTypeToUnsignedShort();
-		readerSkin->Update();
-
-		segmentChannel->SetInputConnection(reader->GetOutputPort());
-		segmentChannel->SetComponents(0);
-		segmentChannel->Update();
 
 		if (reader->GetErrorCode() != vtkErrorCode::NoError)
 		{
@@ -665,10 +651,14 @@ bool QRenderThread::LoadRGBA(QString& FileName)
 		return false;
 	}
 
+	vtkSmartPointer<vtkImageCast> SkinShort = vtkSmartPointer<vtkImageCast>::New();
+	SkinShort->SetInputConnection(reader->GetOutputPort());
+	SkinShort->SetOutputScalarTypeToUnsignedChar();
+
 	vtkSmartPointer<vtkImageAppendComponents> appendRGBA = vtkSmartPointer<vtkImageAppendComponents>::New();
 	appendRGBA->SetInputConnection(MetaImageReader->GetOutputPort());
 	//append->AddInputConnection(IntensityVolume->GetOutputPort());
-	appendRGBA->AddInputConnection(reader->GetOutputPort());
+	appendRGBA->AddInputConnection(SkinShort->GetOutputPort());
 	appendRGBA->Update();
 
 	// Volume resolution
@@ -730,14 +720,6 @@ bool QRenderThread::LoadRGBA(QString& FileName)
 		const long DensityBufferSizeRGB = gScene.m_ResolutionSegment.GetNoElements() * sizeof(short);
 		m_pDensityBufferRGB = (short*)malloc(DensityBufferSizeRGB);
 		memcpy(m_pDensityBufferRGB, readerSeg->GetOutput()->GetScalarPointer(), DensityBufferSizeRGB);
-
-		pVolumeResolutionSegment = readerSkin->GetOutput()->GetExtent();
-		gScene.m_ResolutionSegment.SetResXYZ(Vec3i(pVolumeResolutionSegment[1] + 1, pVolumeResolutionSegment[3] + 1, pVolumeResolutionSegment[5] + 1));
-
-		//const long DensityBufferSizeSkin = gScene.m_ResolutionSegment.GetNoElements() * sizeof(short);
-		m_pDensityBufferSkin = (short*)malloc(DensityBufferSizeRGB);
-		memcpy(m_pDensityBufferSkin, readerSkin->GetOutput()->GetScalarPointer(), DensityBufferSizeRGB);
-
 	}
 	else {
 		int* pVolumeResolutionSegment = MetaImageReader->GetOutput()->GetExtent();

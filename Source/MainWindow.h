@@ -21,6 +21,7 @@
 #include "SettingsDockWidget.h"
 #include "SelectiveOpacityDockWidget.h"
 #include "MeshRenderingDockWidget.h"
+#include "PoseTraceDockWidget.h"
 #include "LogDockWidget.h"
 #include "VtkWidget.h"
 #include "HttpGet.h"
@@ -84,6 +85,7 @@ private:
 	QCameraDockWidget					m_CameraDockWidget;
 	QSettingsDockWidget					m_SettingsDockWidget;
 	QMeshRenderingDockWidget			m_MeshRenderingDockWidget;
+	QPoseTraceDockWidget				m_PoseTraceDockWidget;
 
 	enum
 	{

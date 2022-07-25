@@ -41,7 +41,8 @@ CMainWindow::CMainWindow() :
 	m_CameraDockWidget(),
 	m_SelectiveOpacityDockWidget(),
 	m_SettingsDockWidget(), 
-	m_MeshRenderingDockWidget()
+	m_MeshRenderingDockWidget(),
+	m_PoseTraceDockWidget()
 {
 	gpMainWindow = this;
 
@@ -159,6 +160,12 @@ void CMainWindow::SetupDockingWidgets()
 	addDockWidget(Qt::LeftDockWidgetArea, &m_AppearanceDockWidget);
     m_pViewMenu->addAction(m_AppearanceDockWidget.toggleViewAction());
 
+	// Pose Trace dock widget
+	m_PoseTraceDockWidget.setEnabled(false);
+	m_PoseTraceDockWidget.setAllowedAreas(Qt::AllDockWidgetAreas);
+    addDockWidget(Qt::RightDockWidgetArea, &m_PoseTraceDockWidget);
+    m_pViewMenu->addAction(m_PoseTraceDockWidget.toggleViewAction());
+
 	// Camera dock widget
 	m_CameraDockWidget.setEnabled(false);
 	m_CameraDockWidget.setAllowedAreas(Qt::AllDockWidgetAreas);
@@ -186,10 +193,12 @@ void CMainWindow::SetupDockingWidgets()
 	tabifyDockWidget(&m_AppearanceDockWidget, &m_LightingDockWidget);
 	tabifyDockWidget(&m_AppearanceDockWidget, &m_SelectiveOpacityDockWidget);
 	tabifyDockWidget(&m_AppearanceDockWidget, &m_MeshRenderingDockWidget);
+	tabifyDockWidget(&m_CameraDockWidget, &m_PoseTraceDockWidget);
 //	tabifyDockWidget(&m_LightingDockWidget, &m_CameraDockWidget);
 //	tabifyDockWidget(&m_CameraDockWidget, &m_SettingsDockWidget);
 
 	m_AppearanceDockWidget.raise();
+	m_CameraDockWidget.raise();
 }
 
 void CMainWindow::UpdateRecentFileActions(void)
@@ -339,6 +348,7 @@ void CMainWindow::OnRenderBegin(void)
 	m_CameraDockWidget.setEnabled(true);
 	m_SettingsDockWidget.setEnabled(true);
 	m_LogDockWidget.setEnabled(true);
+	m_PoseTraceDockWidget.setEnabled(true);
 }
 
 void CMainWindow::OnRenderEnd(void)
@@ -359,6 +369,7 @@ void CMainWindow::OnRenderEnd(void)
 	m_CameraDockWidget.setEnabled(false);
 	m_SettingsDockWidget.setEnabled(false);
 	m_LogDockWidget.setEnabled(false);
+	m_PoseTraceDockWidget.setEnabled(false);
 }
 
 void CMainWindow::ShowStartupDialog(void)
