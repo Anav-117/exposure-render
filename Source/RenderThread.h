@@ -68,7 +68,6 @@ private:
 	CColorRgbLdr*		m_pRenderImage;
 	short*				m_pDensityBuffer;
 	short*				m_pDensityBufferRGB;
-	short*				m_pDensityBufferSkin;
 	uchar4*				m_pDensityBufferRGBA;
 	float*				m_pOpacityBuffer;
 	short*				m_pGradientMagnitudeBuffer;

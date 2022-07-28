@@ -47,11 +47,12 @@ public:
 	void			SetUp(const Vec3f& Up);
 	void			ReadXML(QDomElement& Parent);
 	QDomElement		WriteXML(QDomDocument& DOM, QDomElement& Parent);
-	static QCamera		Default(void);	
+	static QCamera	Default(void);	
 	bool			CycleCameraParams(void);
 	void			LoadCameraPoses(string);
 	string			GetPoseFileDir(void);
 	void			SetResolution(Vec3f);
+	int				GetNumPoses(void);
 
 public slots:
 	void OnFilmChanged(void);
@@ -70,11 +71,12 @@ private:
 	Vec3f			m_From;
 	Vec3f			m_Target;
 	Vec3f			m_Up;
-	vector<Vec3f>		CameraFroms;
-	vector<Vec3f> 		CameraUps;
+	vector<Vec3f>	CameraFroms;
+	vector<Vec3f> 	CameraUps;
 	string 			PoseFileDir;
 	Vec3f 			Resolution;
 	int 			poseIndex;
+	int				Num_Poses;
 };
 
 // Camera singleton

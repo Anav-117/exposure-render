@@ -106,6 +106,10 @@ SET(ExposureRenderSources
 	MeshRenderingDockWidget.cpp
 	SelectiveOpacity.cpp
 
+	#PoseTrace
+	PoseTraceWidget.cpp
+	PoseTraceDockWidget.cpp
+
 	# Lighting
 	LightWidget.cpp 
 	LightingDockWidget.cpp 
@@ -199,6 +203,10 @@ SET(ExposureRenderHeaders
 	MeshRenderingDockWidget.h
 	SelectiveOpacity.h
 	MouseInteractorHighLightActor.h
+
+	#Pose Trace
+	PoseTraceWidget.h
+	PoseTraceDockWidget.h
 
 	# Lighting
 	LightWidget.h
@@ -298,6 +306,10 @@ SET(ExposureRenderMocHeaders
 	MeshRendering.h
 	MeshRenderingDockWidget.h
 	SelectiveOpacity.h
+
+	#Pose Trace
+	PoseTraceWidget.h
+	PoseTraceDOckWidget.h
 
 	# Lighting
 	LightWidget.h
@@ -490,6 +502,17 @@ SET(SelectiveRenderingSources
 
 #Make the Selective Rendering group
 SOURCE_GROUP("Selective_Rendering" FILES ${SelectiveRenderingSources})
+
+#PoseTrace Sources
+SET(PoseTraceSources
+	PoseTraceWidget.h
+	PoseTraceWidget.cpp
+	PoseTraceDockWidget.h
+	PoseTraceDockWidget.cpp
+)
+
+#Make the Pose Trace group
+SOURCE_GROUP("Pose_Trace" FILES ${PoseTraceSources})
 
 # Lighting sources
 SET(LightingSources

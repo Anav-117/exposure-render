@@ -107,6 +107,8 @@ void QCamera::LoadCameraPoses(string FileName) {
 	}
 	Froms.close();
 
+	Num_Poses = CameraFroms.size();
+
 	SetUp(CameraUps[0]);
 }
 
@@ -123,6 +125,10 @@ bool QCamera::CycleCameraParams(void) {
 
 	poseIndex++;
 	return true;
+}
+
+int QCamera::GetNumPoses(void) {
+	return Num_Poses;
 }
 
 string QCamera::GetPoseFileDir(void) {
