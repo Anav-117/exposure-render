@@ -1,3 +1,9 @@
+/*
+
+Selective Opacity Singleton to hold Opacity Buffer for 1D Opacity Texture
+
+*/
+
 #include "SelectiveOpacity.h"
 
 QSelectiveOpacity gSelectiveOpacity;

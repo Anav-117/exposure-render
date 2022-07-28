@@ -570,14 +570,13 @@ bool QRenderThread::LoadRGBA(QString& FileName)
 
 	string PoseTraceFile = rawname + "_PoseTrace.txt";
 	gCamera.LoadCameraPoses(PoseTraceFile);
-	//std::cout << PosTraceFile;
 	
+	//Segment Files
 	string SegmentFile = rawname + "_Segments.mhd";
 	string SegmentFileSkin = rawname + "_Segments_BG.mhd";
 
 	vtkSmartPointer<vtkMetaImageReader> reader = vtkSmartPointer<vtkMetaImageReader>::New();
 	vtkSmartPointer<vtkMetaImageReader> readerSeg = vtkSmartPointer<vtkMetaImageReader>::New();
-	//vtkSmartPointer<vtkNrrdReader> reader = vtkNrrdReader::New();
 
 	if (!reader->CanReadFile(QString::fromStdString(SegmentFileSkin).toLatin1()) || !readerSeg->CanReadFile(QString::fromStdString(SegmentFile).toLatin1()))
 	{
@@ -588,8 +587,7 @@ bool QRenderThread::LoadRGBA(QString& FileName)
 		gScene.m_SegmentAvailable = true;
 	}
 
-	vtkSmartPointer<vtkImageExtractComponents> segmentChannel = vtkSmartPointer<vtkImageExtractComponents>::New();
-
+	//Loading Segment Volumes
 	if (gScene.m_SegmentAvailable) {
 		reader->SetFileName(QString::fromStdString(SegmentFileSkin).toLatin1());
 		reader->SetNumberOfScalarComponents(1);
@@ -606,6 +604,7 @@ bool QRenderThread::LoadRGBA(QString& FileName)
 			std::cout<<"Error loading file "<<QString(vtkErrorCode::GetStringFromErrorCode(reader->GetErrorCode())).toStdString()<<"\n";
 		}
 	}
+
 	// Create meta image reader
 	vtkSmartPointer<vtkMetaImageReader> MetaImageReader = vtkSmartPointer<vtkMetaImageReader>::New();
 
@@ -625,6 +624,8 @@ bool QRenderThread::LoadRGBA(QString& FileName)
 		Log(QString("Meta image reader can't read file " + QFileInfo(FileName).fileName()).toLatin1(), QLogger::Critical);
 		return false;
 	}
+
+	//Loading RGB Volume
 
 	MetaImageReader->SetFileName(m_FileName.toLatin1());
 	MetaImageReader->SetNumberOfScalarComponents(3);
@@ -651,14 +652,10 @@ bool QRenderThread::LoadRGBA(QString& FileName)
 		return false;
 	}
 
-	vtkSmartPointer<vtkImageCast> SkinShort = vtkSmartPointer<vtkImageCast>::New();
-	SkinShort->SetInputConnection(reader->GetOutputPort());
-	SkinShort->SetOutputScalarTypeToUnsignedChar();
-
+	//Appending Skin Segment to RGB Volume to form a uchar4 volume
 	vtkSmartPointer<vtkImageAppendComponents> appendRGBA = vtkSmartPointer<vtkImageAppendComponents>::New();
 	appendRGBA->SetInputConnection(MetaImageReader->GetOutputPort());
-	//append->AddInputConnection(IntensityVolume->GetOutputPort());
-	appendRGBA->AddInputConnection(SkinShort->GetOutputPort());
+	appendRGBA->AddInputConnection(reader->GetOutputPort());
 	appendRGBA->Update();
 
 	// Volume resolution
@@ -698,13 +695,8 @@ bool QRenderThread::LoadRGBA(QString& FileName)
 
 	Log("Bounding box: " + FormatVector(gScene.m_BoundingBox.m_MinP, 2) + " - " + FormatVector(gScene.m_BoundingBox.m_MaxP), "grid");
 
-	vtkSmartPointer<vtkImageExtractComponents> RGBVolume = vtkSmartPointer<vtkImageExtractComponents>::New();
-	RGBVolume->SetInputConnection(ImageCast->GetOutputPort());
-	RGBVolume->SetComponents(0, 1, 2);
-	RGBVolume->Update();
-
 	vtkSmartPointer<vtkImageRGBToHSI> HSIVolume = vtkSmartPointer<vtkImageRGBToHSI>::New();
-	HSIVolume->SetInputConnection(RGBVolume->GetOutputPort());
+	HSIVolume->SetInputConnection(ImageCast->GetOutputPort());
 	HSIVolume->Update();
 
 	vtkSmartPointer<vtkImageExtractComponents> IntensityVolume = vtkSmartPointer<vtkImageExtractComponents>::New();
@@ -712,6 +704,7 @@ bool QRenderThread::LoadRGBA(QString& FileName)
 	IntensityVolume->SetComponents(2);
 	IntensityVolume->Update();
 
+	//Setting up Segment Volume
 	if (gScene.m_SegmentAvailable) {	
 
 		int* pVolumeResolutionSegment = readerSeg->GetOutput()->GetExtent();
@@ -736,7 +729,7 @@ bool QRenderThread::LoadRGBA(QString& FileName)
 	Log("Creating gradient magnitude volume", "grid");
 		
 	GradientMagnitude->SetDimensionality(3);
-	GradientMagnitude->SetInputConnection(RGBVolume->GetOutputPort());
+	GradientMagnitude->SetInputConnection(ImageCast->GetOutputPort());
 	GradientMagnitude->Update();
 
 	vtkImageData* GradientMagnitudeBuffer = GradientMagnitude->GetOutput();
@@ -761,7 +754,6 @@ bool QRenderThread::LoadRGBA(QString& FileName)
 	GradMagHistogram->SetComponentExtent(0, 255, 0, 0, 0, 0);
 	GradMagHistogram->SetComponentOrigin(0, 0, 0);
 	GradMagHistogram->SetComponentSpacing(gScene.m_GradientMagnitudeRange.GetRange() / 256.0f, 0, 0);
-//	GradMagHistogram->IgnoreZeroOn();
 	GradMagHistogram->Update();
 
 	gScene.m_GradMagMean = (float)GradMagHistogram->GetMean()[0];

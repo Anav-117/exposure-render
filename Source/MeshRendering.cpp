@@ -1,3 +1,11 @@
+/*
+
+Mesh Rendering Singleton
+    Contains variables shared between the Mesh Rendering Tab and Selective Rendering Tree 
+        Major Class - Name of the Major class selected in Mesh View
+        Scalar Range - Scalar Range of Mesh Selected in Mesh View (is unique for every mesh and is used to identify mesh)
+*/
+
 #include "MeshRendering.h"
 #include <iostream>
 

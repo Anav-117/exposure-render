@@ -20,7 +20,6 @@ public:
 public slots:
 	void OnMajorClassChanged();
 	void OnRenderBegin(void);
-	void OnSetOpacity(double Opacity);
 	void OnSelection(QTreeWidgetItem* Item, int col);
 	void OnButtonClick();
 	void OnCheckUpdated();

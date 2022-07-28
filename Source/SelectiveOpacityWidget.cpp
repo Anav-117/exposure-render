@@ -1,3 +1,12 @@
+/*
+
+Widget to create and manage the Selective Opacity Tree
+    Requires the 'OutlinedStructure.csv' file located in the repository's root folder displaying all class names
+    format for csv file
+        L1 Class Name | L2 Class Name | L3 Class Name | L3 Class Label
+
+*/
+
 #include "Stable.h"
 #include <string>
 #include "SelectiveOpacityWidget.h"
@@ -26,7 +35,7 @@ QSelectiveOpacityWidget::QSelectiveOpacityWidget(QWidget* pParent) :
     vector<string> temp;
     vector<string> temp2;
 
-    File.open("./OutlinedStructure.csv", ios::in);
+    File.open("../OutlinedStructure.csv", ios::in);
     string rawline;
     string line;
 
@@ -37,10 +46,9 @@ QSelectiveOpacityWidget::QSelectiveOpacityWidget(QWidget* pParent) :
     int NewMinorClass = 0;
     SubClassSize = 0;
 
+    //Uses the csv to load and differentiate all classes
+
     while(getline(File, rawline)) {
-        //getline(File, line);
-        
-        //stringstream s(line);
         size_t last = rawline.find_last_of(",");
         line = rawline.substr(0, last);
         string segmentNum = rawline.substr(last+1, rawline.length());
@@ -99,6 +107,8 @@ QSelectiveOpacityWidget::QSelectiveOpacityWidget(QWidget* pParent) :
 
     QObject::connect(&m_Tree, SIGNAL(itemClicked(QTreeWidgetItem*, int)), this, SLOT(OnSelection(QTreeWidgetItem*, int)));
     
+    //Uses the loaded class names to create the Selective Opacity Tree
+
     MajorClassSize = MajorClassVector.size();
     MajorClass = new QTreeWidgetItem[MajorClassSize];
     MinorClass = new QTreeWidgetItem[MinorClassSize];
@@ -107,21 +117,17 @@ QSelectiveOpacityWidget::QSelectiveOpacityWidget(QWidget* pParent) :
     int MinorClassIndex=0;
     int SubClassIndex=0;
     for (int i=0; i<MajorClassVector.size(); i++) {
-        //LookUp.push_back({0, -1, 1});
         MajorClass[i].setText(0, tr(((string)MajorClassVector[i]).c_str()));
         MajorClass[i].setCheckState(0, Qt::Checked);
         for (int j=0; j<MinorClassVector[i].size(); j++) {
             MinorClass[j+MinorClassIndex].setText(0, tr(((string)MinorClassVector[i][j]).c_str()));
             MinorClass[j+MinorClassIndex].setCheckState(0, Qt::Checked);
             if (MinorClassVector[i][j].length() > 0) {
-                //LookUp.push_back({1, -1, 1});
                 for (int k=0; k<SubClassVector[j+MinorClassIndex].size(); k++) {
                     SubClass[k+SubClassIndex].setText(0, tr(((string)SubClassVector[j+MinorClassIndex][k]).c_str()));
                     SubClass[k+SubClassIndex].setCheckState(0, Qt::Checked);
-                    //std::cout<<(string)SubClassVector[j+MinorClassIndex][k];
                     if (SubClassVector[j+MinorClassIndex][k].length() > 0) {
                         MinorClass[j+MinorClassIndex].addChild((SubClass + k + SubClassIndex));
-                        //LookUp.push_back({2, Segments[k+SubClassIndex], 1});
                         OpacityArray.push_back({Segments[k+SubClassIndex], 1});
                     }
                 }
@@ -184,12 +190,14 @@ bool operator==(QTreeWidgetItem A, QTreeWidgetItem* B) {
     return A.text(0) == B->text(0);
 }
 
+//Callback for updating opacity on checkbox update
 void QSelectiveOpacityWidget::OnCheckUpdated() {
     for (int i=0; i<SubClassSize; i++) {
         OpacityArray[i][1] = SubClass[i].checkState(0)/2.0f;
     }
 }
 
+//Call back for updating Opacity if L1 class is selected through Mesh view 
 void QSelectiveOpacityWidget::OnMajorClassChanged() {
     string Name = gMeshRendering.GetMajorClass();
 
@@ -259,6 +267,7 @@ void QSelectiveOpacityWidget::OnSubChanged(int index) {
     m_OpacitySpinnerWidget.setValue(OpacityArray[Index][1]);
 }
 
+//Callback for checkbox 
 void QSelectiveOpacityWidget::UpdateCheckBox(QTreeWidgetItem* Item) {
     if (Item->childCount() > 0) {
         for (int i=0; i<Item->childCount(); i++) {
@@ -299,6 +308,7 @@ void QSelectiveOpacityWidget::UpdateCheckBox(QTreeWidgetItem* Item) {
     ResetTex();
 }
 
+//Callback when an item in the tree is selected
 void QSelectiveOpacityWidget::OnSelection(QTreeWidgetItem* Item, int col) {
     if (Item->checkState(0) == Qt::Unchecked) {
         Item->setCheckState(0, Qt::Checked);
@@ -339,6 +349,7 @@ void QSelectiveOpacityWidget::OnSelection(QTreeWidgetItem* Item, int col) {
     }
 }
 
+//Resets the Opacity array when the 'Reset' Button is clicked
 void QSelectiveOpacityWidget::OnButtonClick() {    
     if (SubChanged) {
         OpacityArray[Index][1] = (float)m_OpacitySpinnerWidget.value();
@@ -372,10 +383,7 @@ void QSelectiveOpacityWidget::OnButtonClick() {
     }
 }
 
-void QSelectiveOpacityWidget::OnSetOpacity(double Opacity) {
-    
-}
-
+//Function to Send Opacity Array to reset the 1D Selective Opacity Texture
 void QSelectiveOpacityWidget::ResetTex() {
     for (int i = 0; i < max; i++) {
         Buffer[i] = 0.0f;
@@ -387,11 +395,4 @@ void QSelectiveOpacityWidget::ResetTex() {
 
     gSelectiveOpacity.SetSize(max);
     gSelectiveOpacity.SetOpacityBuffer(Buffer);
-
-    // for (int i = 0; i < max; i++) {
-    //     if (Buffer[i] > 0)
-    //         std::cout<<Buffer[i]<<"\n";
-    // }
-
-    //BindTextureSelectiveOpacity(Buffer, max);
 }

@@ -138,7 +138,6 @@ void BindDensityBufferRGBA(uchar4* pBuffer, short* pBufferRGB, cudaExtent Extent
 	HandleCudaError(cudaBindTextureToArray(gTexDensityRGBA, gpDensityArray, ChannelDesc));
 	
 	HandleCudaError(cudaBindTextureToArray(gTexDensityRGB, gpDensityArrayRGB, ChannelDescRGB));
-	printf("BUFFERS LOADED\n");
 }
 
 void BindDensityBuffer(short* pBuffer, cudaExtent Extent)
@@ -241,8 +240,6 @@ unsigned char* GetDisplayEstimate(void)
 
 void BindTextureSelectiveOpacity(float* Buffer, int BufferSize) {
 	const int WIDTH = BufferSize;
-
-	//printf("%d\n", BufferSize);
 
 	float* hInput = (float*)malloc(sizeof(float) * WIDTH);
 	float* hOutput = (float*)malloc(sizeof(float) * WIDTH);
