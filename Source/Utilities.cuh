@@ -89,7 +89,6 @@ DEV float GetOpacity(const float& NormalizedIntensity, float3 P)
 		Pn.x = P.x*(Rz/Rx);
 		Pn.y = P.y*(Rz/Ry);
 		Pn.z = P.z;
-		//printf("DIFF - %f\n", 1.0f - P.y);
 		if (SegmentAvailable) {
 			if ((float)(BG) == 2.0f) {
 				return 0.0f;
@@ -99,29 +98,22 @@ DEV float GetOpacity(const float& NormalizedIntensity, float3 P)
 			float accum = 0.0f;
 			short SegmentColor;
 
-			for (int x = -samples / 2; x < samples / 2; ++x) {
-				for (int y = -samples / 2; y < samples / 2; ++y) {
-					for (int z = -samples / 2; z < samples / 2; ++z) {
-						float weight = gaussian((x), (y), (z));
+			for (int x = -1; x <= 1; x++) {
+				for (int y = -1; y <= 1; y++) {
+					for (int z = -1; z <= 1; z++) {
+						float weight = gaussian(x, y, z);
 						SegmentColor = tex3D(gTexOpacityRGB, Pn.x*Rx + (x), Pn.y*Ry + (y), Pn.z*Rz + (z));
+						if (SegmentColor == 0.0) {
+							SegmentColor = ((float)tex3D(gTexOpacityRGBA, Pn.x*Rx + (x), Pn.y*Ry + (y), Pn.z*Rz + (z)).w - 2.0f)*(-1.0f) * 10240.0f;
+						}
 						op = op + (tex1D(gTexSelectiveOpacity, (float)(SegmentColor - 1.0f)) * weight);		
 						accum += weight;
 					}
 				}
 			}
 
-			//printf("OP - %f\n", op);
+			op = (op/(accum)) * 0.0175f;// * 150.0f);
 
-			op = op/accum;
-
-			//short SegmentColor = tex3D(gTexOpacityRGB, Pn.x*Rx, Pn.y*Ry, Pn.z*Rz);
-			if (op == 0.0f) {
-				SegmentColor = tex3D(gTexOpacityRGBA, Pn.x*Rx, Pn.y*Ry, Pn.z*Rz).w * 10240.0f;
-				op = tex1D(gTexSelectiveOpacity, (float)(SegmentColor) - 1.0f);
-			}
-			
-			//float op = tex1D(gTexSelectiveOpacity, (float)(SegmentColor) - 1.0f);
-			
 			return (op);
 		}
 		else {
@@ -143,13 +135,10 @@ DEV CColorRgbHdr GetDiffuse(const float& NormalizedIntensity, Vec3f P)
 	Pn.z = P.z;
 	if (isRGBA) {
 		uchar4 Diffuse = tex3D(gTexDiffuseRGBA, Pn.x*Rx, Pn.y*Ry, Pn.z*Rz);
-		//printf("COLOR - %f : %f : %f\n", (float)Diffuse.x, (float)Diffuse.y, (float)Diffuse.z);
 		return CColorRgbHdr((float)Diffuse.x/255.0f, (float)Diffuse.y/255.0f, (float)Diffuse.z/255.0f);
-		//return CColorRgbHdr(0, 255, 0);
 	}
 	else  {
 		float4 Diffuse = tex1D(gTexDiffuse, NormalizedIntensity);
-		//printf("COLOR - %f : %f : %f\n", (float)Diffuse.x, (float)Diffuse.y, (float)Diffuse.z);
 		return CColorRgbHdr((float)Diffuse.x, (float)Diffuse.y, (float)Diffuse.z);
 	}
 }
