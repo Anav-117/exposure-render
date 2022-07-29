@@ -1,3 +1,5 @@
+#pragma once
+
 #include <vtkActor.h>
 #include <vtkInteractorStyleTrackballCamera.h>
 #include <vtkNamedColors.h>
@@ -15,8 +17,7 @@ class MouseInteractorHighLightActor : public vtkInteractorStyleTrackballCamera
 {
 public:
   static MouseInteractorHighLightActor* New();
-  vtkTypeMacro(MouseInteractorHighLightActor,
-               vtkInteractorStyleTrackballCamera);
+  vtkTypeMacro(MouseInteractorHighLightActor, vtkInteractorStyleTrackballCamera);
 
   MouseInteractorHighLightActor()
   {

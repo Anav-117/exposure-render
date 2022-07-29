@@ -7,11 +7,8 @@ QMeshRenderingDockWidget::QMeshRenderingDockWidget(QWidget* pParent) :
 	m_MeshRenderingWidget()
 {
 	setWindowTitle("Mesh");
-	setToolTip("<img src=':/Images/light-bulb.png'><div>Mesh</div>");
-	setWindowIcon(GetIcon("light-bulb"));
+	setToolTip("<img src=':/Images/dummy.png'><div>Mesh View</div>");
+	setWindowIcon(GetIcon("dummy"));
 
 	setWidget(&m_MeshRenderingWidget);
-
 }
-
-QMeshRenderingDockWidget::~QMeshRenderingDockWidget() {}

@@ -50,7 +50,7 @@ QMeshRenderingWidget::QMeshRenderingWidget(QWidget* pParent) :
 	m_Layout.setAlignment(Qt::AlignBottom);
 	setLayout(&m_Layout);
 
-	m_DeleteButton.setText(QString::fromStdString("Delete"));
+	m_DeleteButton.setText(QString::fromStdString("Hide"));
 	m_ResetButton.setText(QString::fromStdString("Reset"));
 
 	QObject::connect(&m_DeleteButton, SIGNAL(clicked()), this, SLOT(OnDelete()));
@@ -165,10 +165,4 @@ void QMeshRenderingWidget::OnScalarRangeChanged(void) {
 			Selected = i;
 		}
 	}
-}
-
-QMeshRenderingWidget::~QMeshRenderingWidget() {}
-
-void QMeshRenderingWidget::OnRenderBegin() {
-
 }

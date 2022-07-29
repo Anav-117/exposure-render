@@ -146,7 +146,7 @@ QRenderThread::QRenderThread(const QString& FileName, QObject* pParent /*= NULL*
 	m_FileName(FileName),
 	m_pRenderImage(NULL),
 	m_pDensityBuffer(NULL),
-	m_pDensityBufferRGB(NULL),
+	m_pDensityBufferSeg(NULL),
 	m_pDensityBufferRGBA(NULL),
 	m_pGradientMagnitudeBuffer(NULL),
 	m_Abort(false),
@@ -168,7 +168,7 @@ QRenderThread::~QRenderThread(void)
 		free(m_pDensityBuffer);
 	}
 	else {
-	free(m_pDensityBufferRGB);
+	free(m_pDensityBufferSeg);
 	free(m_pDensityBufferRGBA);
 	}
 }
@@ -178,7 +178,7 @@ QRenderThread& QRenderThread::operator=(const QRenderThread& Other)
 	m_FileName					= Other.m_FileName;
 	m_pRenderImage				= Other.m_pRenderImage;
 	m_pDensityBuffer			= Other.m_pDensityBuffer;
-	m_pDensityBufferRGB			= Other.m_pDensityBufferRGB;
+	m_pDensityBufferSeg			= Other.m_pDensityBufferSeg;
 	m_pDensityBufferRGBA		= Other.m_pDensityBufferRGBA;
 	RGBAVolume					= Other.RGBAVolume;
 	m_pGradientMagnitudeBuffer	= Other.m_pGradientMagnitudeBuffer;
@@ -227,7 +227,7 @@ void QRenderThread::run()
 		gStatus.SetStatisticChanged("CUDA Memory", "Density Buffer", QString::number(gScene.m_Resolution.GetNoElements() * sizeof(short) / MB, 'f', 2), "MB");
 	}
 	else {
-		BindDensityBufferRGBA((uchar4*)m_pDensityBufferRGBA, (short*)m_pDensityBufferRGB, Res, ResRGB);
+		BindDensityBufferRGBA((uchar4*)m_pDensityBufferRGBA, (short*)m_pDensityBufferSeg, Res, ResRGB);
 		gStatus.SetStatisticChanged("CUDA Memory", "Density Buffer", QString::number(gScene.m_Resolution.GetNoElements() * sizeof(uchar4) / MB, 'f', 2), "MB");
 	}
 
@@ -325,7 +325,6 @@ void QRenderThread::run()
 			BindConstants(&SceneCopy);
 
 			BindTextureSelectiveOpacity(SceneCopy.m_SelectiveOpacity.OpacityBuffer, SceneCopy.m_SelectiveOpacity.Size);
-			gStatus.SetStatisticChanged("CUDA Memory", "Selective Opacity Buffer", QString::number(SceneCopy.m_SelectiveOpacity.GetSize() * sizeof(short) / MB, 'f', 2), "MB");		
 			BindTransferFunctionOpacity(SceneCopy.m_TransferFunctions.m_Opacity);
 			BindTransferFunctionDiffuse(SceneCopy.m_TransferFunctions.m_Diffuse);
 			BindTransferFunctionSpecular(SceneCopy.m_TransferFunctions.m_Specular);
@@ -377,7 +376,12 @@ void QRenderThread::run()
 	free(m_pRenderImage);
 	m_pRenderImage = NULL;
 
-	UnbindDensityBuffer();
+	if (!gScene.m_RGBA) {
+		UnbindDensityBuffer();
+	}
+	else {
+		UnbindDensityBufferRGBA();
+	}
 
 	UnbindTextureSelectiveOpacity();
 	UnbindTransferFunctionOpacity();
@@ -665,8 +669,6 @@ bool QRenderThread::LoadRGBA(QString& FileName)
 	Log("Resolution: " + FormatSize(gScene.m_Resolution.GetResXYZ()) + "", "grid");
 	gScene.m_RGBA = true;
 
-	std::cout<<"Resolution - "<<gScene.m_Resolution.GetResX()<<" : "<<gScene.m_Resolution.GetResY()<<" : "<<gScene.m_Resolution.GetResZ()<<"\n";
-
 	const long DensityBufferSize = gScene.m_Resolution.GetNoElements() * sizeof(uchar4);
  	m_pDensityBufferRGBA = (uchar4*)malloc(DensityBufferSize);
 	memcpy(m_pDensityBufferRGBA, appendRGBA->GetOutput()->GetScalarPointer(), DensityBufferSize);
@@ -711,16 +713,16 @@ bool QRenderThread::LoadRGBA(QString& FileName)
 		gScene.m_ResolutionSegment.SetResXYZ(Vec3i(pVolumeResolutionSegment[1] + 1, pVolumeResolutionSegment[3] + 1, pVolumeResolutionSegment[5] + 1));
 
 		const long DensityBufferSizeRGB = gScene.m_ResolutionSegment.GetNoElements() * sizeof(short);
-		m_pDensityBufferRGB = (short*)malloc(DensityBufferSizeRGB);
-		memcpy(m_pDensityBufferRGB, readerSeg->GetOutput()->GetScalarPointer(), DensityBufferSizeRGB);
+		m_pDensityBufferSeg = (short*)malloc(DensityBufferSizeRGB);
+		memcpy(m_pDensityBufferSeg, readerSeg->GetOutput()->GetScalarPointer(), DensityBufferSizeRGB);
 	}
 	else {
 		int* pVolumeResolutionSegment = MetaImageReader->GetOutput()->GetExtent();
 		gScene.m_ResolutionSegment.SetResXYZ(Vec3i(pVolumeResolutionSegment[1] + 1, pVolumeResolutionSegment[3] + 1, pVolumeResolutionSegment[5] + 1));
 
 		const long DensityBufferSizeRGB = gScene.m_ResolutionSegment.GetNoElements() * sizeof(short);
-		m_pDensityBufferRGB = (short*)malloc(DensityBufferSizeRGB);
-		memcpy(m_pDensityBufferRGB, MetaImageReader->GetOutput()->GetScalarPointer(), DensityBufferSizeRGB);
+		m_pDensityBufferSeg = (short*)malloc(DensityBufferSizeRGB);
+		memcpy(m_pDensityBufferSeg, MetaImageReader->GetOutput()->GetScalarPointer(), DensityBufferSizeRGB);
 	}
 
 	// Gradient magnitude volume
@@ -785,8 +787,6 @@ bool QRenderThread::LoadRGBA(QString& FileName)
 	gStatus.SetStatisticChanged("Volume", "Spacing", FormatSize(gScene.m_Spacing, 2), "mm");
 	gStatus.SetStatisticChanged("Volume", "No. Voxels", QString::number(gScene.m_Resolution.GetNoElements()), "Voxels");
 	gStatus.SetStatisticChanged("Volume", "Density Range", "[" + QString::number(gScene.m_IntensityRange.GetMin()) + ", " + QString::number(gScene.m_IntensityRange.GetMax()) + "]", "");
-
-	std::cout<<"RGBA VOLUME LOADED\n";
 
 	return true;
 }

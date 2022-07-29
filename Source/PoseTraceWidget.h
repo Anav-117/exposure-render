@@ -1,6 +1,6 @@
-#include "Stable.h"
-
 #pragma once
+
+#include "Stable.h"
 
 class QPoseTraceWidget : public QGroupBox
 {
@@ -8,7 +8,6 @@ class QPoseTraceWidget : public QGroupBox
 
 public:
     QPoseTraceWidget(QWidget* pParent = NULL);
-	virtual ~QPoseTraceWidget();
 
 public slots:
 	void OnRenderBegin(void);

@@ -14,11 +14,9 @@ QSelectiveOpacityDockWidget::QSelectiveOpacityDockWidget(QWidget* pParent) :
 
 	// Window title and tooltip
 	setWindowTitle("Selective Opacity");
-	setToolTip("<img src=':/Images/light-bulb.png'><div>Selective Opacity</div>");
-	setWindowIcon(GetIcon("light-bulb"));
+	setToolTip("<img src=':/Images/application-tree.png'><div>Selective Opacity</div>");
+	setWindowIcon(GetIcon("application-tree"));
 
 	setWidget(&m_SelectiveOpacityWidget);//, 0, 0);
 
 }
-
-QSelectiveOpacityDockWidget::~QSelectiveOpacityDockWidget() {}

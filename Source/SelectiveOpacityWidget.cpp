@@ -152,7 +152,6 @@ QSelectiveOpacityWidget::QSelectiveOpacityWidget(QWidget* pParent) :
 
     QObject::connect(&m_OpacitySlider, SIGNAL(valueChanged(double)), &m_OpacitySpinnerWidget, SLOT(setValue(double)));
 	QObject::connect(&m_OpacitySpinnerWidget, SIGNAL(valueChanged(double)), &m_OpacitySlider, SLOT(setValue(double)));
-	QObject::connect(&m_OpacitySlider, SIGNAL(valueChanged(double)), this, SLOT(OnSetOpacity(double)));
     QObject::connect(&gStatus, SIGNAL(RenderBegin()), this, SLOT(OnRenderBegin()));
     QObject::connect(this, SIGNAL(CheckUpdated()), this, SLOT(OnCheckUpdated()));
 
@@ -175,15 +174,6 @@ QSelectiveOpacityWidget::QSelectiveOpacityWidget(QWidget* pParent) :
     m_MainLayout.addWidget(&m_OpacitySlider, 2, 0);
     m_MainLayout.addWidget(&m_OpacitySpinnerWidget, 3, 0);
     m_MainLayout.addWidget(&m_Button, 4, 0);
-
-    delete label;
-}
-
-QSelectiveOpacityWidget::~QSelectiveOpacityWidget() {
-    delete Buffer;
-    delete MajorClass;
-    delete MinorClass;
-    delete SubClass;
 }
 
 bool operator==(QTreeWidgetItem A, QTreeWidgetItem* B) {

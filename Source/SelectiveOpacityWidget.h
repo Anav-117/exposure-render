@@ -1,8 +1,8 @@
+#pragma once
+
 #include <fstream>
 #include "SelectiveOpacity.h"
 #include "MeshRenderingWidget.h"
-
-#pragma once
 
 class QSelectiveOpacityWidget : public QGroupBox
 {
@@ -10,7 +10,6 @@ class QSelectiveOpacityWidget : public QGroupBox
 
 public:
     QSelectiveOpacityWidget(QWidget* pParent = NULL);
-    virtual ~QSelectiveOpacityWidget(void);
 	void ResetTex();
 	void UpdateCheckBox(QTreeWidgetItem* Item);
 	void OnMajorChanged(int);

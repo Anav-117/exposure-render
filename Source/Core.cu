@@ -366,9 +366,14 @@ void BindTransferFunctionDiffuse(CTransferFunction& TransferFunctionDiffuse)
 
 void UnbindTransferFunctionDiffuse(void)
 {
-	HandleCudaError(cudaFreeArray(gpDiffuseArray));
-	gpDiffuseArray = NULL;
-	HandleCudaError(cudaUnbindTexture(gTexDiffuse));
+	if (RGBA) {
+		HandleCudaError(cudaUnbindTexture(gTexDiffuseRGBA));
+	}
+	else  {
+		HandleCudaError(cudaFreeArray(gpDiffuseArray));
+		gpDiffuseArray = NULL;
+		HandleCudaError(cudaUnbindTexture(gTexDiffuse));
+	}
 }
 
 void BindTransferFunctionSpecular(CTransferFunction& TransferFunctionSpecular)

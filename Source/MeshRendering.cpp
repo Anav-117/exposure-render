@@ -16,8 +16,6 @@ QMeshRendering::QMeshRendering(QObject* pParent) :
 {
 }
 
-QMeshRendering::~QMeshRendering() {}
-
 void QMeshRendering::SetMajorClass(string Name) {
     MajorClass = Name;
     emit MajorClassChanged();
