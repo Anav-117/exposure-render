@@ -30,8 +30,6 @@ QPoseTraceWidget::QPoseTraceWidget(QWidget* pParent) :
     }
 }
 
-QPoseTraceWidget::~QPoseTraceWidget() {}
-
 void QPoseTraceWidget::OnRenderBegin() {
     m_FileName.setText(QString::fromStdString(gCamera.GetPoseFileDir()));
     

@@ -1,3 +1,9 @@
+/*
+
+Selective Opacity Singleton to hold Opacity Buffer for 1D Opacity Texture
+
+*/
+
 #include "SelectiveOpacity.h"
 
 QSelectiveOpacity gSelectiveOpacity;
@@ -11,8 +17,6 @@ QSelectiveOpacity& QSelectiveOpacity::operator = (const QSelectiveOpacity& Other
 {
     OpacityBuffer = Other.OpacityBuffer;
 }
-
-QSelectiveOpacity::~QSelectiveOpacity() {}
 
 void QSelectiveOpacity::SetOpacityBuffer(float* Buffer) {
     OpacityBuffer = Buffer;

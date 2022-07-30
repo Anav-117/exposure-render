@@ -1,6 +1,6 @@
-#include "Stable.h"
-
 #pragma once
+
+#include "Stable.h"
 
 class QMeshRendering : public QObject
 {
@@ -12,7 +12,6 @@ public:
     string GetMajorClass();
     void SetScalarRange(double* Range);
     double* GetScalarRange();
-    virtual ~QMeshRendering(void);
 
 signals:
 	void	MajorClassChanged(void);

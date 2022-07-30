@@ -63,21 +63,26 @@ QCamera& QCamera::operator=(const QCamera& Other)
 	return *this;
 }
 
-void QCamera::LoadCameraPoses(string FileName) {
-	//std::cout << "started"; // CameraFroms.size();
+/*
+Function to load Camera Poses for PosTrace Rendering
+	PoseTrace file naming COnvention - VolumeName_PoseTrace.txt
+	PoseTrace file contents
+		1st line must contain 3 comma separated floats describing the 'UP' vector for the camera
+		all sunequent lines must contain 3 comma separaed floats describing the 'FROM' (aka Position) of the Camera 
+	PoseTrace file generated through Paraview spline animation, using Paraview functions cam.GetViewUp and cam.GetPosition
+*/
 
+void QCamera::LoadCameraPoses(string FileName) {
 	fstream Froms;
 	bool UpLoaded = false;
 
 	ifstream f(FileName);
-	if (!f.good()) {
+	if (!f.good()) {	// In case Pose Trace file is not available, an arbitrary UP and FROM value is assigned
 		std::cout << "POSE FILE UNAVAILABLE\n";
 		CameraUps.push_back(Vec3f(0.0f, 1.0f, 0.0f));
 		CameraFroms.push_back(Vec3f(1.0f));
 		return;
 	}
-
-	//std::cout << FileName;
 
 	Froms.open(FileName, ios::in);
 
@@ -112,16 +117,15 @@ void QCamera::LoadCameraPoses(string FileName) {
 	SetUp(CameraUps[0]);
 }
 
+// Cycles through the loaded Camera Positions
+
 bool QCamera::CycleCameraParams(void) {
 	if (poseIndex >= CameraFroms.size()) {
 		poseIndex = 0;
 		return false;
 	}
 
-	//std::cout << CameraFroms.size() << std::endl;
-
 	SetFrom(Vec3f(CameraFroms[poseIndex].x / Resolution.x, CameraFroms[poseIndex].y / Resolution.y, CameraFroms[poseIndex].z / Resolution.z));
-	//std::cout << poseIndex << std::endl;
 
 	poseIndex++;
 	return true;

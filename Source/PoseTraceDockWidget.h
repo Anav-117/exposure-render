@@ -8,7 +8,6 @@ class QPoseTraceDockWidget : public QDockWidget
 
 public:
     QPoseTraceDockWidget(QWidget *parent = NULL);
-    virtual ~QPoseTraceDockWidget();
 
 private:
 	QPoseTraceWidget    m_PoseTraceWidget;

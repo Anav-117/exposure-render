@@ -1,3 +1,13 @@
+/*
+
+Mesh View for selecting specific groups of body parts	
+	Meshes to be rendered must be placed in the folder "MajorClassMeshes" located in repository root
+	Meshes must gave .STL extension
+	Mesh names to be specified in ClassNames.txt
+		Names mentioned in ClassNames.txt must be the same as those mentioned for Selective Rendering Tree
+
+*/
+
 #include "MeshRenderingWidget.h"
 #include <vtkGenericOpenGLRenderWindow.h>
 #include <vtkRenderer.h>
@@ -22,8 +32,6 @@
 #include <string>
 #include <random>
 
-void SaveMeshFile(int startValue, int endValue, string fileName);
-
 vector<string> FileNames;
 vector<std::array<unsigned char, 4>> colors;
 vector<vtkSmartPointer<vtkSTLReader>> polyReader;
@@ -42,7 +50,7 @@ QMeshRenderingWidget::QMeshRenderingWidget(QWidget* pParent) :
 	m_Layout.setAlignment(Qt::AlignBottom);
 	setLayout(&m_Layout);
 
-	m_DeleteButton.setText(QString::fromStdString("Delete"));
+	m_DeleteButton.setText(QString::fromStdString("Hide"));
 	m_ResetButton.setText(QString::fromStdString("Reset"));
 
 	QObject::connect(&m_DeleteButton, SIGNAL(clicked()), this, SLOT(OnDelete()));
@@ -51,6 +59,7 @@ QMeshRenderingWidget::QMeshRenderingWidget(QWidget* pParent) :
 	fstream Names;
 	Names.open("../MajorClassMeshes/ClassNames.txt", ios::in);
 
+	//Loading File Names of meshes to be displayed
 	string rawline;
 	NumSegments=0;
 	while(getline(Names, rawline)) {
@@ -60,6 +69,7 @@ QMeshRenderingWidget::QMeshRenderingWidget(QWidget* pParent) :
 
 	Names.close();
 
+	//initializing VTK variables to store mesh data
 	std::random_device r;
 	std::uniform_int_distribution<int> dist(0, 255);
 	for (int i=0; i<13; i++) {
@@ -73,6 +83,7 @@ QMeshRenderingWidget::QMeshRenderingWidget(QWidget* pParent) :
 	string dir = "../MajorClassMeshes/";
 	string ext = ".stl";
 
+	//Loading Mesh Data
 	for (int i=0; i<NumSegments; i++) {
 		if (i == 1 || i==9 || i==10) 
 			continue;
@@ -101,6 +112,7 @@ void QMeshRenderingWidget::OnReset() {
 	}
 }
 
+//Setting up OpenGL Render window
 void QMeshRenderingWidget::SetupRenderer() {
 
 	for (int i=0; i<NumSegments; i++) {
@@ -127,7 +139,6 @@ void QMeshRenderingWidget::SetupRenderer() {
     this->SetRenderWindow(renderWindow);
 	vtkSmartPointer<QVTKInteractor> interactor = vtkSmartPointer<QVTKInteractor>::New();
 	interactor->SetRenderWindow(this->GetRenderWindow());
-    //this->setFixedHeight(380);
 	this->GetRenderWindow()->AddRenderer(renderer);
 	vtkSmartPointer<MouseInteractorHighLightActor> ClassPicker = vtkSmartPointer<MouseInteractorHighLightActor>::New();
 	ClassPicker->SetDefaultRenderer(renderer);
@@ -139,6 +150,12 @@ void QMeshRenderingWidget::SetupRenderer() {
 	m_Layout.addWidget(&m_ResetButton, 0, 1);
 }
 
+/*
+Function to identify Selected Mesh 
+	When mesh is selected, its the ScalarRange of the gMeshRendering Singleton is updated with the Scalar Range
+	of the selected Mesh. Since Scalar Range of each mesh is unique, we can check against all meshes to find 
+	the name of the selected mesh
+*/
 void QMeshRenderingWidget::OnScalarRangeChanged(void) {
 	double* Range = gMeshRendering.GetScalarRange();
 
@@ -148,10 +165,4 @@ void QMeshRenderingWidget::OnScalarRangeChanged(void) {
 			Selected = i;
 		}
 	}
-}
-
-QMeshRenderingWidget::~QMeshRenderingWidget() {}
-
-void QMeshRenderingWidget::OnRenderBegin() {
-
 }

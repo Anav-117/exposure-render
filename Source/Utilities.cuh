@@ -35,6 +35,7 @@ DEV float pow3(float p) {
 	return p*p*p;
 }
 
+//3D Gaussian Function
 DEV float gaussian(float x, float y, float z) {
     return 1.0 / sqrt(pow3(2.0 * pi * (sigma*sigma))) * exp(-(((x*x) + (y*y) + (z*z)) / (2.0 * (sigma*sigma))));
 }
@@ -44,7 +45,6 @@ DEV float GetNormalizedIntensity(const Vec3f& P)
 	if (isRGBA) {
 		float4 sample = tex3D(gTexDensityRGBA, P.x * gInvAaBbMax.x, P.y * gInvAaBbMax.y, P.z * gInvAaBbMax.z);
 		const float Intensity = ((float)SHRT_MAX * ((sample.x + sample.y + sample.z)/3.0f));
-		//printf("%f\n", (float)tex3D(gTexDensity2, P.x, P.y, P.z));
 		return (Intensity - gIntensityMin) * gIntensityInvRange;
 	}
 	else {
@@ -85,11 +85,17 @@ DEV float GetOpacity(const float& NormalizedIntensity, float3 P)
 	DensityScale = gDensityScale;
 	if (isRGBA) {
 		unsigned char BG = tex3D(gTexOpacityRGBA, (P.x*(Rz/Rx))*Rx, (P.y*(Rz/Ry))*Ry, (P.z)*Rz).w; 
+		
+		//Normalization of sampling ray 
 		float3 Pn;
 		Pn.x = P.x*(Rz/Rx);
 		Pn.y = P.y*(Rz/Ry);
 		Pn.z = P.z;
+		
+		// If Segement information for Selective Opacity is available
 		if (SegmentAvailable) {
+
+			//Skip if outside visible volume
 			if ((float)(BG) == 2.0f) {
 				return 0.0f;
 			}
@@ -98,14 +104,21 @@ DEV float GetOpacity(const float& NormalizedIntensity, float3 P)
 			float accum = 0.0f;
 			short SegmentColor;
 
+			//Convolution mask for Gaussian smoothing of Opacity
 			for (int x = -1; x <= 1; x++) {
 				for (int y = -1; y <= 1; y++) {
 					for (int z = -1; z <= 1; z++) {
 						float weight = gaussian(x, y, z);
+
+						//Fetch Label of current voxel
 						SegmentColor = tex3D(gTexOpacityRGB, Pn.x*Rx + (x), Pn.y*Ry + (y), Pn.z*Rz + (z));
+						
 						if (SegmentColor == 0.0) {
+							//Fetch Label of current voxel from Skin data
 							SegmentColor = ((float)tex3D(gTexOpacityRGBA, Pn.x*Rx + (x), Pn.y*Ry + (y), Pn.z*Rz + (z)).w - 2.0f)*(-1.0f) * 10240.0f;
 						}
+
+						//Fetch Opacity from Selective Opacity Texture using voxel label
 						op = op + (tex1D(gTexSelectiveOpacity, (float)(SegmentColor - 1.0f)) * weight);		
 						accum += weight;
 					}

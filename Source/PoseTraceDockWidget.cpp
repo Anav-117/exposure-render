@@ -7,11 +7,8 @@ QPoseTraceDockWidget::QPoseTraceDockWidget(QWidget* pParent) :
 	m_PoseTraceWidget()
 {
 	setWindowTitle("PoseTrace");
-	setToolTip("<img src=':/Images/light-bulb.png'><div>Mesh</div>");
-	setWindowIcon(GetIcon("light-bulb"));
+	setToolTip("<img src=':/Images/camera--arrow.png'><div>PoseTrace</div>");
+	setWindowIcon(GetIcon("camera--arrow"));
 
 	setWidget(&m_PoseTraceWidget);
-
 }
-
-QPoseTraceDockWidget::~QPoseTraceDockWidget() {}

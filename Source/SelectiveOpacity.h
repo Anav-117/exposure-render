@@ -1,6 +1,6 @@
-#include "Stable.h"
-
 #pragma once
+
+#include "Stable.h"
 
 class QSelectiveOpacity : public QObject
 {
@@ -13,7 +13,6 @@ public:
     float* GetOpacityBuffer();
     void SetSize(int);
     int GetSize();
-    virtual ~QSelectiveOpacity(void);
 
 signals:
 	void	Changed(void);

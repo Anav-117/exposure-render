@@ -1864,14 +1864,6 @@ public:
 		delete OpacityBuffer;
 		OpacityBuffer = new float [Size];
 	}
-
-	HO void printACK(void) {
-		std::cout<<"OPACITY BUFFER\n";
-		for (int i=0; i<Size; i++) {
-			std::cout<<OpacityBuffer[i]<<"\t";
-		}
-		std::cout<<"\n";
-	}
 };
 
 // ToDo: Add description

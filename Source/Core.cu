@@ -138,7 +138,6 @@ void BindDensityBufferRGBA(uchar4* pBuffer, short* pBufferRGB, cudaExtent Extent
 	HandleCudaError(cudaBindTextureToArray(gTexDensityRGBA, gpDensityArray, ChannelDesc));
 	
 	HandleCudaError(cudaBindTextureToArray(gTexDensityRGB, gpDensityArrayRGB, ChannelDescRGB));
-	printf("BUFFERS LOADED\n");
 }
 
 void BindDensityBuffer(short* pBuffer, cudaExtent Extent)
@@ -241,8 +240,6 @@ unsigned char* GetDisplayEstimate(void)
 
 void BindTextureSelectiveOpacity(float* Buffer, int BufferSize) {
 	const int WIDTH = BufferSize;
-
-	//printf("%d\n", BufferSize);
 
 	float* hInput = (float*)malloc(sizeof(float) * WIDTH);
 	float* hOutput = (float*)malloc(sizeof(float) * WIDTH);
@@ -369,9 +366,14 @@ void BindTransferFunctionDiffuse(CTransferFunction& TransferFunctionDiffuse)
 
 void UnbindTransferFunctionDiffuse(void)
 {
-	HandleCudaError(cudaFreeArray(gpDiffuseArray));
-	gpDiffuseArray = NULL;
-	HandleCudaError(cudaUnbindTexture(gTexDiffuse));
+	if (RGBA) {
+		HandleCudaError(cudaUnbindTexture(gTexDiffuseRGBA));
+	}
+	else  {
+		HandleCudaError(cudaFreeArray(gpDiffuseArray));
+		gpDiffuseArray = NULL;
+		HandleCudaError(cudaUnbindTexture(gTexDiffuse));
+	}
 }
 
 void BindTransferFunctionSpecular(CTransferFunction& TransferFunctionSpecular)

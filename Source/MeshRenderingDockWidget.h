@@ -8,7 +8,6 @@ class QMeshRenderingDockWidget : public QDockWidget
 
 public:
     QMeshRenderingDockWidget(QWidget *parent = NULL);
-    virtual ~QMeshRenderingDockWidget();
 
 private:
 	QMeshRenderingWidget    m_MeshRenderingWidget;
