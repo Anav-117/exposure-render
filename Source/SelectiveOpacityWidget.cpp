@@ -174,6 +174,8 @@ QSelectiveOpacityWidget::QSelectiveOpacityWidget(QWidget* pParent) :
     m_MainLayout.addWidget(&m_OpacitySlider, 2, 0);
     m_MainLayout.addWidget(&m_OpacitySpinnerWidget, 3, 0);
     m_MainLayout.addWidget(&m_Button, 4, 0);
+
+    delete label;
 }
 
 bool operator==(QTreeWidgetItem A, QTreeWidgetItem* B) {

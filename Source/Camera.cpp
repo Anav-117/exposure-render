@@ -81,6 +81,7 @@ void QCamera::LoadCameraPoses(string FileName) {
 		std::cout << "POSE FILE UNAVAILABLE\n";
 		CameraUps.push_back(Vec3f(0.0f, 1.0f, 0.0f));
 		CameraFroms.push_back(Vec3f(1.0f));
+		CameraTargets.push_back(Vec3f(0.0f));
 		return;
 	}
 
@@ -91,11 +92,12 @@ void QCamera::LoadCameraPoses(string FileName) {
 	{
 		PoseFileDir = FileName.substr(0, last_slash_idx);
 	}
-
 	string tp;
 	while (getline(Froms, tp)) { 
+		 if (tp.length() == 0)
+		 	break;
 		 stringstream ss(tp);
-		 float vec[3];
+		 float vec[6];
 		 int i = 0;
 		 while (ss.good()) {
 			 string substr;
@@ -108,6 +110,7 @@ void QCamera::LoadCameraPoses(string FileName) {
 		 }
 		 else {
 			 CameraFroms.push_back(Vec3f(vec[0], vec[1], vec[2]));
+			 CameraTargets.push_back(Vec3f(vec[3], vec[4], vec[5]));
 		 }
 	}
 	Froms.close();
@@ -126,6 +129,7 @@ bool QCamera::CycleCameraParams(void) {
 	}
 
 	SetFrom(Vec3f(CameraFroms[poseIndex].x / Resolution.x, CameraFroms[poseIndex].y / Resolution.y, CameraFroms[poseIndex].z / Resolution.z));
+	SetTarget(Vec3f(CameraTargets[poseIndex].x / Resolution.x, CameraTargets[poseIndex].y / Resolution.y, CameraTargets[poseIndex].z / Resolution.z));
 
 	poseIndex++;
 	return true;

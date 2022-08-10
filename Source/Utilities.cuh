@@ -20,7 +20,6 @@ DEV float Rox, Roy, Roz;
 DEV float RSx, RSy, RSz;
 DEV float DensityScale;
 DEV float isRGBA, SegmentAvailable;
-DEV float weight[7] = {0.006, 0.061, 0.242, 0.383, 0.242, 0.061, 0.006};
 
 DEV inline Vec3f ToVec3f(const float3& V)
 {
@@ -125,8 +124,7 @@ DEV float GetOpacity(const float& NormalizedIntensity, float3 P)
 				}
 			}
 
-			op = (op/(accum)) * 0.0175f;// * 150.0f);
-
+			op = (op/(accum)) * 0.0175f;
 			return (op);
 		}
 		else {
