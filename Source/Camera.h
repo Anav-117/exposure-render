@@ -72,6 +72,7 @@ private:
 	Vec3f			m_Target;
 	Vec3f			m_Up;
 	vector<Vec3f>	CameraFroms;
+	vector<Vec3f>	CameraTargets;
 	vector<Vec3f> 	CameraUps;
 	string 			PoseFileDir;
 	Vec3f 			Resolution;

@@ -17,17 +17,21 @@
 #include <vtkActor.h>
 #include <fstream>
 #include <string>
+#include <sstream>
 #include <bitset>
-#include <typeinfo>
+#include <vector>
+
+void FinalizeMesh(vtkSmartPointer<vtkPolyData>, std::string);
 
 int main (int argc, char* argv[]) { 
 	/*
 	INPUT FORMAT
-		(string Input_FileName, string Output_FileName, string LabelSetFile, String Level)
+		(string Input_FileName, string Output_FileName, string LabelSetFile, String Level, String Single/Multi)
 			Input File - MHD
 			Output File - STL
 			LabelSetFile - TXT file with each line containing exactly one label
 			Level - L1/L2/L3 
+			Single/Multi - Whether to create one single mesh from all labels or make individual meshes
 	*/
 
     vtkSmartPointer<vtkMetaImageReader> ImageReader = vtkSmartPointer<vtkMetaImageReader>::New();
@@ -46,11 +50,26 @@ int main (int argc, char* argv[]) {
 	std::cout<<"LABELS - "<<argv[3]<<"\n";
 	if (argc == 5)
 		std::cout<<"LEVEL - "<<argv[4]<<"\n";
+	if (argc == 6)
+		std::cout<<"SAVE TYPE - "<<argv[5]<<"\n";
 
 	std::string Level = "L1";
+	std::string NumMesh = "Single";
 
 	//Setting Level of Extraction
-	if (argc == 5) {
+	if (argc >= 5) {
+		if (argc == 6) {
+			if (strcmp(argv[5], "Multi") == 0) {
+				NumMesh = "Multi";
+			}
+			else if (strcmp(argv[5], "Single") == 0) {
+				NumMesh = "Single";
+			}
+			else {
+				std:cout<<"Incorrect number of meshes";
+				return -1;
+			}
+		}
 		if (strcmp(argv[4],"L1") == 0) {
 			Level = "L1";
 		}
@@ -75,11 +94,18 @@ int main (int argc, char* argv[]) {
 
 	//Boolean to check for first iteration. During first iteration, no appending is done as Poly is empty.
 	bool firstIter = true;
+	std::vector<std::string> line;
 
 	while (getline(Labels, rawline)) {
+		std::stringstream ss(rawline);
+		while (ss.good()) {
+			std::string substr;
+			getline(ss, substr, ',');
+			line.push_back(substr);
+		}
 
 		//Convert Label to Bitmask
-		std::string Segment = std::bitset<16>(std::stoi(rawline)).to_string();
+		std::string Segment = std::bitset<16>(std::stoi(line[0])).to_string();
 
 		float start = 0;
 		float end = 0;
@@ -121,9 +147,17 @@ int main (int argc, char* argv[]) {
 		IExtractor->SetValue(0, 200);
 		IExtractor->Update();
 
+		if (NumMesh == "Multi") {
+			Poly = IExtractor->GetOutput(0);
+			FinalizeMesh(Poly, line[1]);
+			line.clear();
+			continue;
+		}
+
 		if (firstIter) {
 			Poly = IExtractor->GetOutput(0);
 			firstIter = false;
+			line.clear();
 			continue;
 		}
 
@@ -133,10 +167,19 @@ int main (int argc, char* argv[]) {
 		Append->Update();
 
 		Poly = Append->GetOutput(0);
+		line.clear();
 	}
 
 	std::cout<<"Number of Polygons - "<<Poly->GetNumberOfPolys()<<"\n";
 
+	if (NumMesh == "Single") {
+		FinalizeMesh(Poly, argv[2]);
+	}
+
+    return 0;
+}
+
+void FinalizeMesh(vtkSmartPointer<vtkPolyData> Poly, std::string OutputFile) {
 	//Triangulating mesh for Decimation and Smoothing
 	vtkSmartPointer<vtkTriangleFilter> Triangluation = vtkSmartPointer<vtkTriangleFilter>::New();
 	Triangluation->SetInputData(Poly);
@@ -158,10 +201,12 @@ int main (int argc, char* argv[]) {
 	SmoothVolume->SetRelaxationFactor(0.1);
 	SmoothVolume->Update();
 
+	std::cout<< "OUTPUT " <<OutputFile<<"\n";
+
 	//Writing Mesh to STL file
 	vtkSmartPointer<vtkSTLWriter> writer = vtkSmartPointer<vtkSTLWriter>::New();
 	writer->SetInputConnection(SmoothVolume->GetOutputPort());
-	writer->SetFileName(argv[2]);
+	writer->SetFileName(OutputFile.c_str());
 	writer->SetFileTypeToBinary();
 	writer->Write();
 
@@ -201,6 +246,4 @@ int main (int argc, char* argv[]) {
 
 	renderWindow->Render();
 	renWinInteractor->Start();
-
-    return 0;
 }

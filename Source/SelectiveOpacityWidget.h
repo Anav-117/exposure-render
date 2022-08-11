@@ -1,8 +1,8 @@
-#pragma once
-
 #include <fstream>
 #include "SelectiveOpacity.h"
 #include "MeshRenderingWidget.h"
+
+#pragma once
 
 class QSelectiveOpacityWidget : public QGroupBox
 {

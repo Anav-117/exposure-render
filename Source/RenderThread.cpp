@@ -574,7 +574,7 @@ bool QRenderThread::LoadRGBA(QString& FileName)
 
 	string PoseTraceFile = rawname + "_PoseTrace.txt";
 	gCamera.LoadCameraPoses(PoseTraceFile);
-	
+
 	//Segment Files
 	string SegmentFile = rawname + "_Segments.mhd";
 	string SegmentFileSkin = rawname + "_Segments_BG.mhd";
@@ -628,6 +628,7 @@ bool QRenderThread::LoadRGBA(QString& FileName)
 		Log(QString("Meta image reader can't read file " + QFileInfo(FileName).fileName()).toLatin1(), QLogger::Critical);
 		return false;
 	}
+
 
 	//Loading RGB Volume
 
