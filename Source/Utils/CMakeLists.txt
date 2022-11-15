@@ -1,4 +1,4 @@
-PROJECT(MeshCreation)
+PROJECT(Utils)
 
 IF(NOT VTK_BINARY_DIR)
 FIND_PACKAGE(VTK)
@@ -14,9 +14,17 @@ SET(MeshCreationSources
 	MeshCreation.cpp
 )
 
+SET(SegmentDataCreationSources
+  SegmentDataCreation.cpp
+)
+
 add_executable(MeshCreation ${MeshCreationSources})
+add_executable(SegmentDataCreation ${SegmentDataCreationSources})
 
 TARGET_LINK_LIBRARIES(MeshCreation
     ${VTK_LIBRARIES}
 )
 
+TARGET_LINK_LIBRARIES(SegmentDataCreation
+    ${VTK_LIBRARIES}
+)

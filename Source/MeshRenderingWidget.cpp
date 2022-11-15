@@ -85,8 +85,8 @@ QMeshRenderingWidget::QMeshRenderingWidget(QWidget* pParent) :
 
 	//Loading Mesh Data
 	for (int i=0; i<NumSegments; i++) {
-		if (i == 1 || i==9 || i==10) 
-			continue;
+		//if (i == 1 || i==9 || i==10) 
+		//	continue;
 		polyReader[i]->SetFileName((dir+FileNames[i]+ext).c_str());
 		polyReader[i]->Update();
 		Mapper[i]->SetInputConnection(polyReader[i]->GetOutputPort());
@@ -118,7 +118,7 @@ void QMeshRenderingWidget::SetupRenderer() {
 	for (int i=0; i<NumSegments; i++) {
     	renderer->AddActor(surface[i]);
 	}
-    renderer->SetBackground(0.6, 0.2, 0.5);
+    renderer->SetBackground(0.8, 0.8, 0.8);
     
     vtkSmartPointer<vtkCamera> aCamera = vtkSmartPointer<vtkCamera>::New();
   	aCamera->SetViewUp(0, 0, -1);

@@ -26,7 +26,7 @@ void FinalizeMesh(vtkSmartPointer<vtkPolyData>, std::string);
 int main (int argc, char* argv[]) { 
 	/*
 	INPUT FORMAT
-		(string Input_FileName, string Output_FileName, string LabelSetFile, String Level, String Single/Multi)
+		(String Single/Multi, string Input_FileName, string Output_FileName, string LabelSetFile, String Level)
 			Input File - MHD
 			Output File - STL
 			LabelSetFile - TXT file with each line containing exactly one label
@@ -37,21 +37,21 @@ int main (int argc, char* argv[]) {
     vtkSmartPointer<vtkMetaImageReader> ImageReader = vtkSmartPointer<vtkMetaImageReader>::New();
 	
 	//Reading Input File
-	ImageReader->SetFileName(argv[1]);
+	ImageReader->SetFileName(argv[2]);
     ImageReader->SetNumberOfScalarComponents(1);
 	ImageReader->Update(); 
 
 	fstream Labels;
-	Labels.open(argv[3], ios::in);
+	Labels.open(argv[4], ios::in);
 	std::string rawline;
 
-	std::cout<<"INPUT - "<<argv[1]<<"\n";
-	std::cout<<"OUTPUT - "<<argv[2]<<"\n";
-	std::cout<<"LABELS - "<<argv[3]<<"\n";
+	std::cout<<"INPUT - "<<argv[2]<<"\n";
+	std::cout<<"OUTPUT - "<<argv[3]<<"\n";
+	std::cout<<"LABELS - "<<argv[4]<<"\n";
 	if (argc == 5)
-		std::cout<<"LEVEL - "<<argv[4]<<"\n";
-	if (argc == 6)
-		std::cout<<"SAVE TYPE - "<<argv[5]<<"\n";
+		std::cout<<"LEVEL - "<<argv[5]<<"\n";
+	
+	std::cout<<"SAVE TYPE - "<<argv[1]<<"\n";
 
 	std::string Level = "L1";
 	std::string NumMesh = "Single";
@@ -59,10 +59,10 @@ int main (int argc, char* argv[]) {
 	//Setting Level of Extraction
 	if (argc >= 5) {
 		if (argc == 6) {
-			if (strcmp(argv[5], "Multi") == 0) {
+			if (strcmp(argv[1], "Multi") == 0) {
 				NumMesh = "Multi";
 			}
-			else if (strcmp(argv[5], "Single") == 0) {
+			else if (strcmp(argv[1], "Single") == 0) {
 				NumMesh = "Single";
 			}
 			else {
@@ -70,13 +70,13 @@ int main (int argc, char* argv[]) {
 				return -1;
 			}
 		}
-		if (strcmp(argv[4],"L1") == 0) {
+		if (strcmp(argv[5],"L1") == 0) {
 			Level = "L1";
 		}
-		else if (strcmp(argv[4],"L2") == 0) {
+		else if (strcmp(argv[5],"L2") == 0) {
 			Level = "L2";
 		}
-		else if (strcmp(argv[4],"L3") == 0) {
+		else if (strcmp(argv[5],"L3") == 0) {
 			Level = "L3";
 		}
 		else {
@@ -173,7 +173,7 @@ int main (int argc, char* argv[]) {
 	std::cout<<"Number of Polygons - "<<Poly->GetNumberOfPolys()<<"\n";
 
 	if (NumMesh == "Single") {
-		FinalizeMesh(Poly, argv[2]);
+		FinalizeMesh(Poly, argv[3]);
 	}
 
     return 0;
