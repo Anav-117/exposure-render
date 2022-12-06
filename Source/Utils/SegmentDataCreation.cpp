@@ -4,18 +4,23 @@
 #include <vtkSmartPointer.h>
 #include <vtkImageIterator.h>
 #include <vtkImageData.h>
+#include <vtkPointData.h>
+#include <vtkUnsignedShortArray.h>
+#include <vtkImageCast.h>
 #include <fstream>
 #include <string>
 #include <sstream>
 #include <bitset>
 #include <vector>
 
+void FinalizeVolume(vtkSmartPointer<vtkImageData>, std::string);
+
 int main (int argc, char* argv[]) { 
 	/*
 	INPUT FORMAT
 		(String Single/Multi, string Input_FileName, string Segment_FileName, string Output_FileName, string LabelSetFile, String Level)
 			Input File - MHD
-			Output File - STL
+			Output File - MHD
 			LabelSetFile - TXT file with each line containing exactly one label
 			Level - L1/L2/L3 
 			Single/Multi - Whether to create one single mesh from all labels or make individual meshes
@@ -27,6 +32,8 @@ int main (int argc, char* argv[]) {
 	ImageReader->SetFileName(argv[2]);
     ImageReader->SetNumberOfScalarComponents(1);
 	ImageReader->Update();
+
+	std::cout<<argv[2]<<std::endl;
 
     vtkSmartPointer<vtkMetaImageReader> SegmentImageReader = vtkSmartPointer<vtkMetaImageReader>::New();
 	
@@ -48,49 +55,44 @@ int main (int argc, char* argv[]) {
 	std::cout<<"SAVE TYPE - "<<argv[1]<<"\n";
 
 	std::string Level = "L1";
-	std::string NumMesh = "Single";
-    
-    std::cout<<"1\n";
+	std::string NumVol = "Single";
 	
     //Setting Level of Extraction
-	if (argc >= 5) {
-		if (argc == 6) {
-			if (strcmp(argv[1], "Multi") == 0) {
-				NumMesh = "Multi";
-			}
-			else if (strcmp(argv[1], "Single") == 0) {
-				NumMesh = "Single";
-			}
-			else {
-				std:cout<<"Incorrect number of meshes";
-				return -1;
-			}
-		}
-		if (strcmp(argv[6],"L1") == 0) {
-			Level = "L1";
-		}
-		else if (strcmp(argv[6],"L2") == 0) {
-			Level = "L2";
-		}
-		else if (strcmp(argv[6],"L3") == 0) {
-			Level = "L3";
-		}
-		else {
-			std::cout<<"Incorrect Segment Level\n";
-			return -1;
-		}
-	}
 
-    std::cout<<"2\n";
+	if (strcmp(argv[1], "Multi") == 0) {
+		NumVol = "Multi";
+	}
+	else if (strcmp(argv[1], "Single") == 0) {
+		NumVol = "Single";
+	}
+	else {
+		std:cout<<"Incorrect number of meshes";
+		return -1;
+	}
+	
+	if (strcmp(argv[6],"L1") == 0) {
+		Level = "L1";
+	}
+	else if (strcmp(argv[6],"L2") == 0) {
+		Level = "L2";
+	}
+	else if (strcmp(argv[6],"L3") == 0) {
+		Level = "L3";
+	}
+	else {
+		std::cout<<"Incorrect Segment Level\n";
+		return -1;
+	}
+	
+
 
 	//Image Threshold filter for creating Binary volume
 	vtkSmartPointer<vtkImageThreshold> VolumeThreshold = vtkSmartPointer<vtkImageThreshold>::New();
 
 	std::vector<std::string> line;
-    std::cout<<"2.1\n";
 	while (getline(Labels, rawline)) {
-        std::cout<<"2.2\n";
 		std::stringstream ss(rawline);
+		std::cout<<rawline<<std::endl;
 		while (ss.good()) {
 			std::string substr;
 			getline(ss, substr, ',');
@@ -98,7 +100,7 @@ int main (int argc, char* argv[]) {
 		}
 
 		//Convert Label to Bitmask
-		std::string Segment = std::bitset<16>(std::stoi(line[0])).to_string();
+		std::string Segment = std::bitset<16>(std::stoi(line[0])).to_string();	
 
 		float start = 0;
 		float end = 0;
@@ -126,41 +128,79 @@ int main (int argc, char* argv[]) {
 		std::cout<<"START - "<<start<<'\n';
 		std::cout<<"END - "<<end<<'\n';
 
-        std::cout<<"3\n";
-
 		//Creating Binary Volume
 		VolumeThreshold->SetInputConnection(SegmentImageReader->GetOutputPort());
 		VolumeThreshold->SetInValue(255);
 		VolumeThreshold->SetOutValue(0);
 		VolumeThreshold->ThresholdBetween(start, end);
+		VolumeThreshold->Update();
 
-        int* Extent= ImageReader->GetOutput()->GetExtent();
+		int* SegmentVolumeResolution = SegmentImageReader->GetOutput()->GetExtent();
+        const int SegmentBufferSize = (SegmentVolumeResolution[1] + 1) * (SegmentVolumeResolution[3] + 1) * (SegmentVolumeResolution[5] + 1) * sizeof(short);
+		short* SegmentBuffer = (short*)malloc(SegmentBufferSize);
+		memcpy(SegmentBuffer, SegmentImageReader->GetOutput()->GetScalarPointer(), SegmentBufferSize);
 
-        std::cout<<"4\n";
+		int* VolumeResolution = ImageReader->GetOutput()->GetExtent();
+        const int BufferSize = (VolumeResolution[1] + 1) * (VolumeResolution[3] + 1) * (VolumeResolution[5] + 1) * sizeof(short);
+		short* Buffer = (short*)malloc(BufferSize);
+		memcpy(Buffer, ImageReader->GetOutput()->GetScalarPointer(), BufferSize);
 
-        vtkImageIterator<double> it(ImageReader->GetOutput(), Extent);
-        while (!it.IsAtEnd()){
-            double* valIt = it.BeginSpan();
-            double* valEnd = it.EndSpan();
-            while (valIt != valEnd){
-                // Increment for each component
-                double x = *valIt++;
-                double y = *valIt++;
-                double z = *valIt++;
-                if(VolumeThreshold->GetOutput()->GetScalarComponentAsFloat(x, y, z, 0.0) == 0.0) {
-                    ImageReader->GetOutput()->SetScalarComponentFromDouble(x, y, z, 0, 0.0);    
-                }
-            }
-            std::cout << std::endl;
-            it.NextSpan();
-        }
+		for (int i=0; i<SegmentBufferSize/sizeof(short); i++) {
+			if (SegmentBuffer[i] != 0) {
+				Buffer[i] = SegmentBuffer[i];
+			}
+			std::string Segment = std::bitset<16>(Buffer[i]).to_string();
+			std::string L1 = Segment.substr(1, 4);
+			std::string L2 = Segment.substr(5, 8);
+			std::string NewLabel = L1+L2;
+			Buffer[i] = (unsigned short) std::bitset<8>(NewLabel).to_ulong();
+		}
 
-        std::cout<<"5\n";
+		std::cout<<"Loop Complete\n";
 
-        vtkSmartPointer<vtkMetaImageWriter> writer = vtkSmartPointer<vtkMetaImageWriter>::New();
-        writer->SetInputConnection(ImageReader->GetOutputPort());
-        writer->SetFileName(argv[4]);
-        writer->Write();
+		vtkSmartPointer<vtkUnsignedShortArray> usarray = vtkSmartPointer<vtkUnsignedShortArray>::New( );
+		usarray->SetNumberOfComponents( 1 );
+		usarray->SetArray( ( ushort* )( Buffer ), BufferSize, 1 );
+	
+		vtkSmartPointer<vtkImageData> ImageData = vtkSmartPointer<vtkImageData>::New();
+		
+		ImageData->SetDimensions(ImageReader->GetOutput()->GetDimensions());
+		ImageData->SetSpacing(ImageReader->GetOutput()->GetSpacing());
 
+		ImageData->GetPointData()->SetScalars(usarray);
+		ImageData->Modified();
+		
+		usarray->Delete();
+		
+
+		vtkSmartPointer<vtkImageCast> ImageCast = vtkImageCast::New();
+		ImageCast->SetInputData(ImageData);
+		ImageCast->SetOutputScalarTypeToUnsignedShort();
+		ImageCast->Update();
+
+		if (NumVol == "Multi") {
+			FinalizeVolume(ImageCast->GetOutput(), line[1]);
+			line.clear();
+			continue;
+		}
+		line.clear();
+		if (NumVol == "Single") {
+			std::cout<<"Finalizing Volume\n";
+			FinalizeVolume(ImageCast->GetOutput(), argv[4]);
+			break;
+		}
     }
+}
+
+void FinalizeVolume(vtkSmartPointer<vtkImageData> Volume, std::string OutputFile) {
+	std::string filename = OutputFile;
+	std::cout<<filename<<std::endl;
+	vtkSmartPointer<vtkMetaImageWriter> writer = vtkSmartPointer<vtkMetaImageWriter>::New();
+	writer->SetInputData(Volume);
+	writer->SetFileName(filename.c_str());
+	writer->SetRAWFileName((filename.substr(0, filename.length()-3) + "raw").c_str());
+	std::cout<<writer->GetRAWFileName()<<std::endl;
+	writer->Update();
+	writer->Write();
+	std::cout<<"Volume Saved\n";
 }
